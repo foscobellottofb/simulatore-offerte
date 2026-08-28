@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     BollettaPdf({ risultato: body.risultato, input: body.input, nomeCliente: body.nomeCliente })
   );
 
-  return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="bolletta-simulata-${body.risultato.offerta.nome.replace(/\s+/g, '-')}.pdf"`
