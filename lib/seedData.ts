@@ -195,3 +195,30 @@ export const PARAMETRI_SEED: Prisma.ParametroDettaglioCreateManyInput[] = [
   { chiave: 'IVA_PERC_GAS', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 22, unita: '%', ordinamento: 2 },
   { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 }
 ];
+
+/**
+ * Argomenti di supporto al consulente, mostrati nel Confronto concorrenza.
+ * Punti generali e prudenti: non citano promozioni o importi specifici,
+ * perché quelli vanno verificati con la rete commerciale prima dell'uso.
+ * Amministrabili dalla pagina Admin senza toccare il codice.
+ */
+export const ARGOMENTI_SEED: Prisma.ArgomentoVenditaCreateManyInput[] = [
+  { tipo: 'ENEL_VINCE', testo: 'Il prezzo Enel è già più conveniente su questi consumi: si può chiudere facendo leva sul risparmio immediato.', ordinamento: 1 },
+  { tipo: 'ENEL_VINCE', testo: 'Nessuna interruzione di fornitura nel passaggio: gestito interamente da Enel.', ordinamento: 2 },
+  { tipo: 'ENEL_VINCE', testo: 'Un unico interlocutore per assistenza, fatturazione ed eventuali reclami.', ordinamento: 3 },
+  {
+    tipo: 'CONCORRENTE_VARIABILE',
+    testo:
+      "Il prezzo del concorrente è variabile: può salire con l'andamento del mercato energetico. Un'offerta Enel a prezzo fisso protegge il cliente da rincari imprevisti in un contesto di mercato ancora incerto.",
+    ordinamento: 1
+  },
+  {
+    tipo: 'CONCORRENTE_FISSO',
+    testo: 'A parità di condizioni contrattuali, fai leva sul valore di affidarsi a un fornitore storico con presenza capillare sul territorio, invece che sul solo prezzo.',
+    ordinamento: 1
+  },
+  { tipo: 'GENERALE', testo: 'Rete di assistenza Spazio Enel diffusa sul territorio, oltre al canale telefonico dedicato Business.', ordinamento: 10 },
+  { tipo: 'GENERALE', testo: 'Un solo fornitore per luce e gas semplifica gestione, fatturazione e assistenza.', ordinamento: 11 },
+  { tipo: 'GENERALE', testo: 'Verifica se sono attive promozioni o vantaggi dedicati ai clienti Enel Business per questo periodo (non inclusi in questo calcolo).', ordinamento: 12 },
+  { tipo: 'GENERALE', testo: 'Solidità di un operatore storico: minore rischio di disservizi o cambi di condizioni improvvisi.', ordinamento: 13 }
+];

@@ -70,6 +70,25 @@ model ParametroDettaglio {
 }
 
 // Ogni simulazione salvata: dati cliente + offerta scelta + eventuale confronto concorrente.
+enum TipoArgomento {
+  ENEL_VINCE
+  CONCORRENTE_VARIABILE
+  CONCORRENTE_FISSO
+  GENERALE
+}
+
+// Argomenti di supporto per il consulente, mostrati nella pagina Confronto
+// concorrenza in base al risultato (Enel vince/perde) e al tipo di prezzo
+// del concorrente. Amministrabili dalla pagina Admin senza toccare il codice.
+model ArgomentoVendita {
+  id          String        @id @default(cuid())
+  tipo        TipoArgomento
+  testo       String
+  attivo      Boolean       @default(true)
+  ordinamento Int           @default(0)
+  updatedAt   DateTime      @updatedAt
+}
+
 model Simulazione {
   id                String   @id @default(cuid())
   nomeCliente       String?

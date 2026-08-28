@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     nomeCliente?: string;
     pod?: string;
     indirizzoFornitura?: string;
+    codiceFiscalePiva?: string;
   } = await req.json();
 
   const buffer = await renderToBuffer(
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
       input: body.input,
       nomeCliente: body.nomeCliente,
       pod: body.pod,
-      indirizzoFornitura: body.indirizzoFornitura
+      indirizzoFornitura: body.indirizzoFornitura,
+      codiceFiscalePiva: body.codiceFiscalePiva
     })
   );
 

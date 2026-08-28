@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Offerta, ParametroDettaglio, Commodity } from '@/lib/types';
+import { Offerta, ParametroDettaglio, Commodity, ArgomentoVendita } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
 import { Argomentario } from '@/components/Argomentario';
 
@@ -17,6 +17,7 @@ export function ConcorrenzaClient() {
   const [giorniFattura, setGiorniFattura] = useState(60);
   const [nomeCliente, setNomeCliente] = useState('');
   const [pod, setPod] = useState('');
+  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
 
   const [prezzoKwh, setPrezzoKwh] = useState<number | ''>('');
   const [ccv, setCcv] = useState<number | ''>('');
@@ -26,16 +27,20 @@ export function ConcorrenzaClient() {
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
+  const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetch('/api/offerte').then((r) => r.json()), fetch('/api/parametri').then((r) => r.json())]).then(
-      ([o, p]) => {
-        setOfferte(o);
-        setParametri(p);
-      }
-    );
+    Promise.all([
+      fetch('/api/offerte').then((r) => r.json()),
+      fetch('/api/parametri').then((r) => r.json()),
+      fetch('/api/argomenti').then((r) => r.json())
+    ]).then(([o, p, a]) => {
+      setOfferte(o);
+      setParametri(p);
+      setArgomenti(a);
+    });
   }, []);
 
   const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura };
@@ -105,7 +110,7 @@ export function ConcorrenzaClient() {
     const res = await fetch('/api/pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ risultato: migliorEnel, input, nomeCliente, pod })
+      body: JSON.stringify({ risultato: migliorEnel, input, nomeCliente, pod, codiceFiscalePiva })
     });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -172,6 +177,10 @@ export function ConcorrenzaClient() {
               <div>
                 <label className="label">POD (opzionale, per PDF)</label>
                 <input className="input" value={pod} onChange={(e) => setPod(e.target.value)} placeholder="IT001E..." />
+              </div>
+              <div>
+                <label className="label">Cod. Fiscale/P.IVA (opzionale)</label>
+                <input className="input" value={codiceFiscalePiva} onChange={(e) => setCodiceFiscalePiva(e.target.value)} />
               </div>
             </div>
 
@@ -298,6 +307,7 @@ export function ConcorrenzaClient() {
 
           {migliorEnel && risultatoConcorrente && (
             <Argomentario
+              argomenti={argomenti}
               enelVince={migliorEnel.totaleBolletta <= risultatoConcorrente.totaleBolletta}
               tipoPrezzoConcorrente={tipoPrezzoConcorrente}
             />

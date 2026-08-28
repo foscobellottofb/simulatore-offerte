@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Svg, Path } from '@react-pdf/renderer';
 import { RisultatoCalcolo, InputSimulazione } from './types';
 import { consumoNelPeriodo } from './calcoli';
 
@@ -40,17 +40,19 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 12
   },
-  logo: { fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', letterSpacing: -0.5, color: NAVY },
+  logoRow: { flexDirection: 'row' },
   logoSub: { fontSize: 7, color: '#666', marginTop: 2 },
+  fiscaleBox: { flexDirection: 'row', gap: 22, marginTop: 4 },
+  fiscaleLabel: { fontSize: 6.5, fontWeight: 700, color: '#111', borderBottomWidth: 1, borderBottomColor: NAVY, paddingBottom: 1, marginBottom: 2 },
+  fiscaleValue: { fontSize: 8, color: NAVY },
   badge: {
     backgroundColor: NAVY,
     color: '#FFFFFF',
-    borderRadius: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 8,
-    textAlign: 'center'
+    width: 56,
+    paddingVertical: 8,
+    alignItems: 'center'
   },
+  badgeText: { fontSize: 6.5, fontWeight: 700, textAlign: 'center', marginTop: 4 },
   body: { paddingHorizontal: 32, paddingBottom: 40 },
   clienteRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
   clienteBlock: { fontSize: 9, lineHeight: 1.5 },
@@ -151,16 +153,30 @@ const styles = StyleSheet.create({
   },
 
   contattiBox: {
-    flexDirection: 'row',
     marginTop: 14,
     borderWidth: 1,
-    borderColor: NAVY,
+    borderColor: LINE,
     borderRadius: 4,
-    padding: 10,
-    gap: 10
+    overflow: 'hidden'
   },
-  contattiLabel: { fontSize: 6.5, color: '#666', textTransform: 'uppercase', marginBottom: 2 },
-  contattiValue: { fontSize: 8, fontWeight: 700, color: NAVY }
+  contattiHeader: {
+    backgroundColor: NAVY,
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 700,
+    paddingVertical: 6,
+    paddingHorizontal: 10
+  },
+  contattiBody: { flexDirection: 'row', padding: 12, gap: 20 },
+  contattiCol: { flex: 1, gap: 8 },
+  contattiLabel: { fontSize: 8, fontWeight: 700, color: '#111' },
+  contattiValue: { fontSize: 7.5, color: '#666', marginTop: 1 },
+
+  offertaBox: { marginTop: 14, borderWidth: 1, borderColor: LINE, borderRadius: 4, padding: 12 },
+  offertaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 8 },
+  offertaLabel: { fontSize: 6.5, color: '#666', textTransform: 'uppercase', marginBottom: 2 },
+  offertaValue: { fontSize: 8.5, fontWeight: 700, color: '#111' },
+  offertaFormula: { fontSize: 7.5, color: '#444', marginTop: 6, lineHeight: 1.4 }
 });
 
 function euro(n: number) {
@@ -176,16 +192,19 @@ export function BollettaPdf({
   input,
   nomeCliente,
   pod,
-  indirizzoFornitura
+  indirizzoFornitura,
+  codiceFiscalePiva
 }: {
   risultato: RisultatoCalcolo;
   input: InputSimulazione;
   nomeCliente?: string;
   pod?: string;
   indirizzoFornitura?: string;
+  codiceFiscalePiva?: string;
 }) {
   const dataOggi = new Date().toLocaleDateString('it-IT');
   const consumoPeriodo = consumoNelPeriodo(input).toFixed(0);
+  const etichettaCommodity = input.commodity === 'LUCE' ? 'ENERGIA ELETTRICA' : 'GAS NATURALE';
 
   const gruppi = [
     { label: 'Quota consumi', valore: risultato.riepilogo.quotaConsumi, gruppo: 'CONSUMI' as const },
@@ -196,21 +215,41 @@ export function BollettaPdf({
     { label: 'Accise e IVA', valore: risultato.riepilogo.acciseEIva, gruppo: 'ACCISE' as const }
   ];
 
+  const HeaderPagina = () => (
+    <View style={styles.header}>
+      <View>
+        <View style={styles.logoRow}>
+          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#E4572E' }}>e</Text>
+          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#EC407A' }}>n</Text>
+          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#42A5F5' }}>e</Text>
+          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#43A047' }}>l</Text>
+        </View>
+        <Text style={styles.logoSub}>Enel Business — Mercato libero dell'energia</Text>
+        {codiceFiscalePiva && (
+          <View style={styles.fiscaleBox}>
+            <View>
+              <Text style={styles.fiscaleLabel}>Codice Fiscale / Partita IVA</Text>
+              <Text style={styles.fiscaleValue}>{codiceFiscalePiva}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+      <View style={styles.badge}>
+        <Svg width="18" height="18" viewBox="0 0 24 24">
+          <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#FFFFFF" />
+        </Svg>
+        <Text style={styles.badgeText}>{etichettaCommodity.split(' ')[0]}</Text>
+        <Text style={styles.badgeText}>{etichettaCommodity.split(' ')[1]}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <Document>
       {/* PAGINA 1 — riepilogo, come lo "Scontrino dell'energia" */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.logo}>enel</Text>
-            <Text style={styles.logoSub}>Enel Business — Mercato libero dell'energia</Text>
-          </View>
-          <View style={styles.badge}>
-            <Text>{input.commodity === 'LUCE' ? 'ENERGIA' : 'GAS'}</Text>
-            <Text>ELETTRICA</Text>
-          </View>
-        </View>
+        <HeaderPagina />
 
         <View style={styles.body}>
           <View style={styles.clienteRow}>
@@ -293,21 +332,28 @@ export function BollettaPdf({
           </View>
 
           <View style={styles.contattiBox}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contattiLabel}>Sito web</Text>
-              <Text style={styles.contattiValue}>enel.it</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contattiLabel}>Numero gratuito</Text>
-              <Text style={styles.contattiValue}>140</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.contattiLabel}>Spazio Enel</Text>
-              <Text style={styles.contattiValue}>enel.it/spazio-enel</Text>
-            </View>
-            <View style={{ flex: 1.4 }}>
-              <Text style={styles.contattiLabel}>Per posta</Text>
-              <Text style={styles.contattiValue}>Enel Energia S.p.A. — Casella Postale 8080, 85100 Potenza</Text>
+            <Text style={styles.contattiHeader}>Contatti</Text>
+            <View style={styles.contattiBody}>
+              <View style={styles.contattiCol}>
+                <View>
+                  <Text style={styles.contattiLabel}>Sito Web</Text>
+                  <Text style={styles.contattiValue}>vai su enel.it</Text>
+                </View>
+                <View>
+                  <Text style={styles.contattiLabel}>Spazio Enel</Text>
+                  <Text style={styles.contattiValue}>vai su enel.it/spazio-enel</Text>
+                </View>
+              </View>
+              <View style={styles.contattiCol}>
+                <View>
+                  <Text style={styles.contattiLabel}>Numero gratuito 140</Text>
+                  <Text style={styles.contattiValue}>Dalle 7:00 alle 22:00, dal lun. alla dom. (esclusi festivi)</Text>
+                </View>
+                <View>
+                  <Text style={styles.contattiLabel}>Per posta</Text>
+                  <Text style={styles.contattiValue}>Enel Energia S.p.A. — Casella Postale 8080, 85100 Potenza</Text>
+                </View>
+              </View>
             </View>
           </View>
 
@@ -325,13 +371,13 @@ export function BollettaPdf({
       {/* PAGINA 2 — dettaglio piatto di ogni voce, come "Dettaglio importi della bolletta" */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <View style={[styles.header, { backgroundColor: PAPER, paddingVertical: 12 }]}>
-          <Text style={{ fontSize: 10, color: NAVY, fontWeight: 700 }}>
-            Dettaglio importi — {risultato.offerta.nome}
-          </Text>
-        </View>
+        <HeaderPagina />
 
         <View style={styles.body}>
+          <Text style={{ fontSize: 10, color: NAVY, fontWeight: 700, marginBottom: 8 }}>
+            Dettaglio importi — {risultato.offerta.nome}
+          </Text>
+
           <Text style={styles.sectionBar}>TUTTE LE VOCI</Text>
           <View style={styles.tableHeadRow}>
             <Text style={styles.colLabel}>Descrizione</Text>
@@ -350,6 +396,61 @@ export function BollettaPdf({
           <View style={styles.row}>
             <Text style={styles.colLabel}>IVA</Text>
             <Text style={styles.colVal}>{euro(risultato.iva)}</Text>
+          </View>
+
+          <Text style={styles.sectionBar}>BOX DELL'OFFERTA</Text>
+          <View style={styles.offertaBox}>
+            <View style={styles.offertaGrid}>
+              <View>
+                <Text style={styles.offertaLabel}>Nome offerta</Text>
+                <Text style={styles.offertaValue}>{risultato.offerta.nome}</Text>
+              </View>
+              <View>
+                <Text style={styles.offertaLabel}>Tipologia</Text>
+                <Text style={styles.offertaValue}>
+                  {risultato.offerta.tipoPrezzo === 'VARIABILE_CAP'
+                    ? 'Prezzo variabile con CAP'
+                    : risultato.offerta.tipoPrezzo === 'PERSONALIZZATA'
+                      ? 'Prezzo personalizzato'
+                      : 'Prezzo fisso'}
+                </Text>
+              </View>
+              <View>
+                <Text style={styles.offertaLabel}>Durata</Text>
+                <Text style={styles.offertaValue}>{risultato.offerta.durataMesi} mesi</Text>
+              </View>
+              <View>
+                <Text style={styles.offertaLabel}>Vendibilità</Text>
+                <Text style={styles.offertaValue}>{risultato.offerta.vendibilita}</Text>
+              </View>
+            </View>
+
+            {risultato.offerta.tipoPrezzo === 'VARIABILE_CAP' && (
+              <>
+                <View style={styles.offertaGrid}>
+                  {risultato.offerta.parametroAlfa != null && (
+                    <View>
+                      <Text style={styles.offertaLabel}>Parametro Alfa</Text>
+                      <Text style={styles.offertaValue}>{risultato.offerta.parametroAlfa.toFixed(4)} €/{input.commodity === 'LUCE' ? 'kWh' : 'Smc'}</Text>
+                    </View>
+                  )}
+                  {risultato.offerta.cap != null && (
+                    <View>
+                      <Text style={styles.offertaLabel}>CAP (tetto massimo)</Text>
+                      <Text style={styles.offertaValue}>{risultato.offerta.cap.toFixed(4)} €/{input.commodity === 'LUCE' ? 'kWh' : 'Smc'}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.offertaFormula}>
+                  Formula prezzo per la quota consumi: Prezzo ({input.commodity === 'LUCE' ? '€/kWh' : '€/Smc'}) = Indice di
+                  riferimento di mercato ({input.commodity === 'LUCE' ? 'PUN' : 'PSV'}) + Alfa, con tetto massimo pari al
+                  CAP indicato sopra. In questa simulazione, non avendo accesso all'indice di mercato in tempo reale, il
+                  prezzo viene calcolato usando il CAP come scenario prudenziale (il costo massimo possibile per il
+                  cliente). Dispacciamento, sbilanciamento e perdite di rete non sono simulati separatamente qui: sono
+                  già inclusi nelle voci "Trasporto e oneri di sistema" del riepilogo, con parametri standard ARERA.
+                </Text>
+              </>
+            )}
           </View>
 
           <View style={styles.totaleBox}>

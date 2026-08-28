@@ -22,6 +22,7 @@ export function SimulatoreClient() {
   const [nomeCliente, setNomeCliente] = useState('');
   const [pod, setPod] = useState('');
   const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
+  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
 
   useEffect(() => {
     Promise.all([fetch('/api/offerte').then((r) => r.json()), fetch('/api/parametri').then((r) => r.json())]).then(
@@ -53,7 +54,8 @@ export function SimulatoreClient() {
         input,
         nomeCliente,
         pod,
-        indirizzoFornitura
+        indirizzoFornitura,
+        codiceFiscalePiva
       })
     });
     const blob = await res.blob();
@@ -128,6 +130,10 @@ export function SimulatoreClient() {
           <div className="sm:col-span-2">
             <label className="label">Indirizzo fornitura (opzionale, per il PDF)</label>
             <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Cod. Fiscale/P.IVA (opzionale)</label>
+            <input className="input" value={codiceFiscalePiva} onChange={(e) => setCodiceFiscalePiva(e.target.value)} />
           </div>
         </div>
       </div>

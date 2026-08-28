@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { OFFERTE_SEED, PARAMETRI_SEED } from '@/lib/seedData';
+import { OFFERTE_SEED, PARAMETRI_SEED, ARGOMENTI_SEED } from '@/lib/seedData';
 
 /**
  * Visita https://tuo-progetto.vercel.app/api/seed?key=LA_TUA_CHIAVE nel browser
@@ -16,14 +16,17 @@ export async function GET(req: NextRequest) {
 
   await prisma.offerta.deleteMany();
   await prisma.parametroDettaglio.deleteMany();
+  await prisma.argomentoVendita.deleteMany();
   await prisma.offerta.createMany({ data: OFFERTE_SEED });
   await prisma.parametroDettaglio.createMany({ data: PARAMETRI_SEED });
+  await prisma.argomentoVendita.createMany({ data: ARGOMENTI_SEED });
 
   const offerte = await prisma.offerta.count();
   const parametri = await prisma.parametroDettaglio.count();
+  const argomenti = await prisma.argomentoVendita.count();
 
   return NextResponse.json({
     ok: true,
-    messaggio: `Caricate ${offerte} offerte e ${parametri} parametri di dettaglio.`
+    messaggio: `Caricate ${offerte} offerte, ${parametri} parametri di dettaglio e ${argomenti} argomenti di vendita.`
   });
 }

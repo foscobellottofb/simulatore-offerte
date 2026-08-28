@@ -35,6 +35,16 @@ export interface ParametroDettaglio {
   ordinamento: number;
 }
 
+export type TipoArgomento = 'ENEL_VINCE' | 'CONCORRENTE_VARIABILE' | 'CONCORRENTE_FISSO' | 'GENERALE';
+
+export interface ArgomentoVendita {
+  id: string;
+  tipo: TipoArgomento;
+  testo: string;
+  attivo: boolean;
+  ordinamento: number;
+}
+
 export interface InputSimulazione {
   commodity: Commodity;
   consumoKwh: number; // valore inserito dall'utente: annuale oppure del periodo, secondo tipoConsumo
