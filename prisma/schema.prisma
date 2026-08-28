@@ -1,0 +1,95 @@
+// Schema del database del simulatore offerte Enel SMB.
+// Deploy consigliato: Vercel Postgres o Supabase (entrambi Postgres).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Commodity {
+  LUCE
+  GAS
+}
+
+enum TipoPrezzo {
+  FISSO
+  VARIABILE_CAP
+  PERSONALIZZATA
+}
+
+// Una riga = una offerta Enel Business, ricalcata dal foglio
+// "CTE_Enel_SMB_import_SharePoint" che oggi mantieni a mano in Excel.
+model Offerta {
+  id                  String     @id @default(cuid())
+  nome                String
+  commodity           Commodity
+  tipoPrezzo          TipoPrezzo
+  potenzaMinKw        Float? // es. 0, 3, 15 - null = non applicabile (gas)
+  potenzaMaxKw        Float? // es. 15, 25
+  prezzoFisso         Float? // €/kWh, valorizzato se tipoPrezzo = FISSO
+  parametroAlfa       Float? // €/kWh, valorizzato se VARIABILE_CAP
+  cap                 Float? // €/kWh, tetto massimo se VARIABILE_CAP
+  ccvMensile          Float // corrispettivo di vendita fisso mensile, €
+  durataMesi          Int
+  disponibileTablet   Boolean @default(true)
+  disponibileCartaceo Boolean @default(false)
+  canalePreferenziale String? // Tablet / Cartaceo
+  vendibilita         String // es. "SINGLE / DUAL / MULTI"
+  strutturaPrezzo     String @default("Monoraria")
+  scontoPercento      Float? // per offerte "personalizzate" tipo Oro Happy
+  oreInizioAgevolazione Int?
+  oreFineAgevolazione   Int?
+  attiva              Boolean @default(true)
+  note                String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  simulazioni         Simulazione[]
+
+  @@index([commodity, attiva])
+}
+
+// Voci di dettaglio configurabili (accise, IVA, trasmissione, oneri di sistema...).
+// Sostituisce la tabella statica che oggi tieni fuori da Power BI.
+model ParametroDettaglio {
+  id          String   @id @default(cuid())
+  chiave      String   @unique // es. "ACCISA_LUCE_KWH", "IVA_PERC", "TRASMISSIONE_KWH"
+  etichetta   String   // es. "Accisa energia elettrica"
+  categoria   String   // "Accise e IVA" | "Trasmissione e oneri" | "Altre voci"
+  commodity   Commodity?
+  valore      Float
+  unita       String   // "€/kWh" | "%" | "€/mese" | "€/kW"
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+// Ogni simulazione salvata: dati cliente + offerta scelta + eventuale confronto concorrente.
+model Simulazione {
+  id                String   @id @default(cuid())
+  nomeCliente       String?
+  consumoAnnuoKwh   Float
+  potenzaKw         Float
+  giorniFattura     Int      @default(60)
+  commodity         Commodity
+
+  offertaId         String?
+  offerta           Offerta? @relation(fields: [offertaId], references: [id])
+
+  // Dati concorrente, inseriti a mano o via OCR
+  concorrenteNome      String?
+  concorrentePrezzoKwh Float?
+  concorrenteCcv       Float?
+  concorrenteTotale    Float? // totale bolletta dichiarato, per verifica
+
+  totaleEnel        Float?
+  totaleConcorrente Float?
+  rispiarmoAnnuo    Float?
+
+  fotoBollettaUrl   String? // se caricata una foto per OCR
+
+  createdAt DateTime @default(now())
+}
