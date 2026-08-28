@@ -82,25 +82,25 @@ export function SimulatoreClient() {
               <option value="GAS">Gas</option>
             </select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="label">Consumo</label>
-            <div className="flex gap-2">
-              <select
-                className="input w-32 shrink-0"
-                value={tipoConsumo}
-                onChange={(e) => setTipoConsumo(e.target.value as 'ANNUO' | 'PERIODO')}
-              >
-                <option value="PERIODO">Del periodo</option>
-                <option value="ANNUO">Annuo</option>
-              </select>
-              <input
-                type="number"
-                className="input"
-                value={consumoKwh}
-                onChange={(e) => setConsumoKwh(Number(e.target.value))}
-                placeholder={tipoConsumo === 'PERIODO' ? `kWh nei ${giorniFattura} giorni` : 'kWh in un anno'}
-              />
-            </div>
+          <div>
+            <label className="label">Tipo consumo</label>
+            <select
+              className="input"
+              value={tipoConsumo}
+              onChange={(e) => setTipoConsumo(e.target.value as 'ANNUO' | 'PERIODO')}
+            >
+              <option value="PERIODO">Del periodo</option>
+              <option value="ANNUO">Annuo</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">{tipoConsumo === 'PERIODO' ? `kWh nei ${giorniFattura} giorni` : 'kWh in un anno'}</label>
+            <input
+              type="number"
+              className="input"
+              value={consumoKwh}
+              onChange={(e) => setConsumoKwh(Number(e.target.value))}
+            />
           </div>
           {commodity === 'LUCE' && (
             <div>
