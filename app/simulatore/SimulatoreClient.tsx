@@ -58,7 +58,7 @@ export function SimulatoreClient() {
   }
 
   return (
-    <div className="p-8 max-w-6xl">
+    <div className="p-4 sm:p-8 max-w-6xl">
       <h1 className="text-2xl font-semibold tracking-tight mb-1">Simulatore offerte</h1>
       <p className="text-sm text-enel-ink/60 mb-6">
         Inserisci i dati del cliente per vedere le offerte Enel disponibili e il confronto voce per voce.
@@ -112,7 +112,8 @@ export function SimulatoreClient() {
         <>
           <div className="card overflow-hidden mb-6">
             <div className="px-5 py-3 border-b border-enel-line font-medium text-sm">Elenco offerte</div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-enel-paper text-enel-ink/60 text-xs uppercase">
                 <tr>
                   <th className="text-left px-5 py-2">Offerta</th>
@@ -153,6 +154,7 @@ export function SimulatoreClient() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {attiva && (

@@ -1,26 +1,32 @@
 import { Offerta, ParametroDettaglio, InputSimulazione, RisultatoCalcolo, RigaConfronto } from './types';
+import { calcolaCostiRete, ACCISA_LUCE_KWH } from './tariffeLuce';
 
 /**
- * NOTA IMPORTANTE
- * ----------------
- * Questa è una formula di calcolo "ragionevole ma semplificata", ricostruita
- * dai valori che comparivano nel tuo report Power BI per il caso di esempio
- * (5.000 kWh/anno, 20 kW, 60 giorni fattura). Non è la formula ufficiale
- * Enel per accise, oneri di rete e IVA, che dipende da scaglioni di
- * potenza/consumo e da delibere ARERA aggiornate periodicamente.
+ * Motore di calcolo bolletta, verificato contro 2 bollette reali Enel Flex
+ * Impresa Pmi (periodo giu-lug 2026 e apr-mag 2026, POD IT001E04775530).
  *
- * Prima di usarla con i clienti, fai validare i coefficienti (o l'intera
- * formula) da chi in azienda gestisce oggi il file Excel/Power BI: qui la
- * priorità è avere una struttura corretta e facilmente sostituibile, non
- * indovinare la formula esatta.
+ * Formula confermata dalle bollette:
+ *   Imponibile = spesa energia (materia prima, dal listino offerta)
+ *              + CCV (corrispettivo di vendita)
+ *              + costi di rete (distribuzione + trasmissione + misura, sia
+ *                quota fissa che potenza che energia)
+ *              + oneri di sistema (ASOS + ARIM)
+ *              + accisa
+ *              + altre voci (eventuali, di default 0)
+ *   IVA = 22% dell'imponibile
+ *   Totale = Imponibile + IVA
+ *
+ * Le "altre partite" che si vedono in bolletta (interessi di mora, spese di
+ * sollecito) sono penali una tantum non legate al consumo: non fanno parte
+ * di una simulazione di offerta e sono volutamente escluse qui.
  */
 
-const GIORNI_RIFERIMENTO = 60; // i parametri di dettaglio sono tarati su una fattura di 60 giorni
+const GIORNI_ANNO = 365;
 
 function offerteFiltrabile(offerta: Offerta, input: InputSimulazione): boolean {
   if (!offerta.attiva) return false;
   if (offerta.commodity !== input.commodity) return false;
-  if (offerta.commodity === 'GAS') return true; // la potenza non si applica al gas
+  if (offerta.commodity === 'GAS') return true;
   const min = offerta.potenzaMinKw ?? 0;
   const max = offerta.potenzaMaxKw ?? Infinity;
   return input.potenzaKw >= min && input.potenzaKw <= max;
@@ -34,9 +40,13 @@ function prezzoEnergiaUnitario(offerta: Offerta): number {
   if (offerta.tipoPrezzo === 'FISSO' || offerta.tipoPrezzo === 'PERSONALIZZATA') {
     return offerta.prezzoFisso ?? 0;
   }
-  // VARIABILE_CAP: senza un indice PUN live usiamo il CAP come scenario
+  // VARIABILE_CAP: senza un indice PUN/PSV live usiamo il CAP come scenario
   // prudenziale (il prezzo massimo che il cliente pagherebbe).
   return offerta.cap ?? offerta.parametroAlfa ?? 0;
+}
+
+function parametroValore(parametri: ParametroDettaglio[], chiave: string, fallback = 0): number {
+  return parametri.find((p) => p.chiave === chiave)?.valore ?? fallback;
 }
 
 export function calcolaOfferta(
@@ -44,45 +54,56 @@ export function calcolaOfferta(
   input: InputSimulazione,
   parametri: ParametroDettaglio[]
 ): RisultatoCalcolo {
-  const fattoreGiorni = input.giorniFattura / GIORNI_RIFERIMENTO;
-  const consumoFatturato = (input.consumoAnnuoKwh * input.giorniFattura) / 365;
+  const fattoreAnno = input.giorniFattura / GIORNI_ANNO;
+  const consumoFatturato = input.consumoAnnuoKwh * fattoreAnno;
 
   const prezzoUnitario = prezzoEnergiaUnitario(offerta);
   const spesaEnergia = prezzoUnitario * consumoFatturato;
   const spesaCcv = offerta.ccvMensile * (input.giorniFattura / 30);
 
-  const paramCommodity = parametri.filter(
-    (p) => p.commodity === input.commodity || p.commodity === null
-  );
-
   const righeDettaglio: RigaConfronto[] = [];
   let totaleVociFisse = 0;
-  let ivaPercentuale = 0;
 
-  for (const p of paramCommodity) {
-    if (p.unita === '%') {
-      // Le percentuali (tipicamente l'IVA) si applicano al subtotale, non si sommano qui.
-      if (p.chiave.startsWith('IVA')) ivaPercentuale = p.valore;
-      continue;
+  if (input.commodity === 'LUCE') {
+    const rete = calcolaCostiRete(input.potenzaKw);
+    const speseFisseRete = rete.fissaAnno * fattoreAnno;
+    const spesePotenza = rete.potenzaAnnoPerKw * input.potenzaKw * fattoreAnno;
+    const speseEnergiaRete = rete.energiaKwh * consumoFatturato;
+    const accisa = ACCISA_LUCE_KWH * consumoFatturato;
+
+    righeDettaglio.push(
+      { categoria: 'Trasporto e oneri di sistema', etichetta: `Quota fissa (fascia ${rete.fascia})`, valore: speseFisseRete },
+      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota potenza', valore: spesePotenza },
+      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota energia (trasmissione + oneri)', valore: speseEnergiaRete },
+      { categoria: 'Accise e IVA', etichetta: 'Accisa energia elettrica', valore: accisa }
+    );
+    totaleVociFisse = speseFisseRete + spesePotenza + speseEnergiaRete + accisa;
+  } else {
+    // GAS: la formula ARERA per distribuzione/oneri gas non è ancora presente
+    // nel foglio parametri fornito. Uso i parametri di dettaglio manuali
+    // (tab "Parametri di dettaglio" in Admin) come approssimazione, in attesa
+    // di un foglio tariffe gas equivalente a quello luce.
+    const paramGas = parametri.filter((p) => p.commodity === 'GAS' && p.unita !== '%' && !p.chiave.startsWith('ALTRE_VOCI'));
+    for (const p of paramGas) {
+      const valoreScalato = p.unita === '€/fattura' ? p.valore * (input.giorniFattura / 60) : p.valore * consumoFatturato;
+      righeDettaglio.push({ categoria: p.categoria, etichetta: p.etichetta, valore: valoreScalato });
+      totaleVociFisse += valoreScalato;
     }
-    const valoreScalato = p.unita === '€/fattura' ? p.valore * fattoreGiorni : p.valore;
-    righeDettaglio.push({ categoria: p.categoria, etichetta: p.etichetta, valore: valoreScalato });
-    totaleVociFisse += valoreScalato;
   }
+
+  const altreVoci = parametroValore(parametri, input.commodity === 'LUCE' ? 'ALTRE_VOCI_LUCE' : 'ALTRE_VOCI_GAS', 0);
+  if (altreVoci) {
+    righeDettaglio.push({ categoria: 'Altre voci', etichetta: 'Altre voci', valore: altreVoci });
+    totaleVociFisse += altreVoci;
+  }
+
+  const ivaPercentuale = parametroValore(parametri, input.commodity === 'LUCE' ? 'IVA_PERC_LUCE' : 'IVA_PERC_GAS', 22);
 
   const totaleImponibile = spesaEnergia + spesaCcv + totaleVociFisse;
   const iva = totaleImponibile * (ivaPercentuale / 100);
   const totaleBolletta = totaleImponibile + iva;
 
-  return {
-    offerta,
-    spesaEnergia,
-    spesaCcv,
-    righeDettaglio,
-    totaleImponibile,
-    iva,
-    totaleBolletta
-  };
+  return { offerta, spesaEnergia, spesaCcv, righeDettaglio, totaleImponibile, iva, totaleBolletta };
 }
 
 export function calcolaTutteLeOfferte(
@@ -97,10 +118,8 @@ export function calcolaTutteLeOfferte(
 
 /**
  * Calcolo del "totale concorrente" a partire dai due soli dati che l'utente
- * inserisce (prezzo kWh e CCV): tutte le altre voci (accise, IVA, oneri di
- * rete...) restano quelle configurate nei parametri di dettaglio, come
- * richiesto - l'idea è isolare la sola componente su cui il concorrente
- * compete davvero (materia energia + commercializzazione).
+ * inserisce (prezzo kWh e CCV): tutte le altre voci (rete, oneri, accisa,
+ * IVA...) restano quelle regolate uguali per tutti i fornitori.
  */
 export function calcolaConcorrente(
   prezzoKwh: number,
@@ -126,6 +145,7 @@ export function calcolaConcorrente(
     vendibilita: '-',
     strutturaPrezzo: 'Monoraria',
     scontoPercento: null,
+    richiedeContatore2G: false,
     attiva: true,
     note: null
   };

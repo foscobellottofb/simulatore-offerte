@@ -92,7 +92,7 @@ export function ConcorrenzaClient() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-8 max-w-5xl">
       <h1 className="text-2xl font-semibold tracking-tight mb-1">Confronto con la concorrenza</h1>
       <p className="text-sm text-enel-ink/60 mb-6">
         Inserisci solo prezzo kWh e CCV del concorrente (a mano o da foto bolletta): gli altri dati restano quelli

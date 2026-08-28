@@ -40,10 +40,12 @@ model Offerta {
   canalePreferenziale String? // Tablet / Cartaceo
   vendibilita         String // es. "SINGLE / DUAL / MULTI"
   strutturaPrezzo     String @default("Monoraria")
-  scontoPercento      Float? // per offerte "personalizzate" tipo Oro Happy
+  scontoPercento        Float? // per offerte "personalizzate" tipo Oro Happy
   oreInizioAgevolazione Int?
   oreFineAgevolazione   Int?
-  attiva              Boolean @default(true)
+  scontoDalMese         Int? // da quale mese contrattuale si applica lo sconto orario
+  richiedeContatore2G   Boolean @default(false)
+  attiva                Boolean @default(true)
   note                String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

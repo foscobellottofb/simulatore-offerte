@@ -68,4 +68,3 @@ prisma/
   schema.prisma       modello dati (Offerta, ParametroDettaglio, Simulazione)
   seed.ts             dati iniziali ricostruiti dai tuoi file
 ```
-
