@@ -1,6 +1,15 @@
-import { Document, Page, Text, View, StyleSheet, Svg, Path } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Svg, Path, Circle, Polyline, Rect, Line, Image } from '@react-pdf/renderer';
+import fs from 'fs';
+import path from 'path';
 import { RisultatoCalcolo, InputSimulazione } from './types';
 import { consumoNelPeriodo } from './calcoli';
+
+// Logo Enel reale, letto da /public e incorporato come base64 (siamo lato server,
+// dentro app/api/pdf/route.ts, quindi fs è disponibile).
+const LOGO_PATH = path.join(process.cwd(), 'public', 'logo-enel.png');
+const LOGO_BASE64 = fs.existsSync(LOGO_PATH)
+  ? `data:image/png;base64,${fs.readFileSync(LOGO_PATH).toString('base64')}`
+  : null;
 
 /**
  * Template ricalcato sulla struttura delle bollette sintetiche Enel Energia:
@@ -8,13 +17,15 @@ import { consumoNelPeriodo } from './calcoli';
  * consumo, come nell'originale) + corpo bianco, box grigio con POD/potenza/
  * indirizzo, "Scontrino dell'energia" con voci principali e "di cui"
  * indentati, filigrana "SIMULAZIONE" per non confonderla con una bolletta
- * reale.
+ * reale. Box "Contatti" e "Segnalazione guasti" affiancati con icone lineari,
+ * sul modello delle bollette Enel Business.
  *
- * NOTA: non è incluso il logo Enel ufficiale (marchio registrato) — al suo
- * posto c'è una ricostruzione tipografica dello stesso stile.
+ * Il logo Enel reale viene letto da /public/logo-enel.png; se il file non è
+ * presente (es. non è stato caricato) si usa un fallback tipografico.
  */
 
-const NAVY = '#0F1F3D';
+const NAVY = '#12224C';
+const GRAY_HEADER = '#6C6F76';
 const GREEN = '#00843D';
 const PAPER = '#F4F6F5';
 const LINE = '#DCE1E6';
@@ -152,25 +163,45 @@ const styles = StyleSheet.create({
     paddingTop: 8
   },
 
+  contattiRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
   contattiBox: {
-    marginTop: 14,
+    flex: 1,
     borderWidth: 1,
     borderColor: LINE,
-    borderRadius: 4,
+    borderRadius: 6,
     overflow: 'hidden'
   },
   contattiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: NAVY,
     color: '#FFFFFF',
     fontSize: 9,
     fontWeight: 700,
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 10
   },
-  contattiBody: { flexDirection: 'row', padding: 12, gap: 20 },
-  contattiCol: { flex: 1, gap: 8 },
+  guastiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: GRAY_HEADER,
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 700,
+    paddingVertical: 7,
+    paddingHorizontal: 10
+  },
+  contattiBody: { flexDirection: 'row', padding: 12, gap: 16 },
+  contattiCol: { flex: 1, gap: 9 },
+  contattiItem: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
+  contattiIconWrap: { paddingTop: 1 },
   contattiLabel: { fontSize: 8, fontWeight: 700, color: '#111' },
-  contattiValue: { fontSize: 7.5, color: '#666', marginTop: 1 },
+  contattiValue: { fontSize: 7.5, color: '#666', marginTop: 1, lineHeight: 1.35 },
+  guastiBody: { padding: 12, gap: 10 },
+  guastiLabel: { fontSize: 7.5, fontWeight: 700, color: '#111', marginBottom: 2 },
+  guastiValue: { fontSize: 7.5, color: '#666', lineHeight: 1.4 },
 
   offertaBox: { marginTop: 14, borderWidth: 1, borderColor: LINE, borderRadius: 4, padding: 12 },
   offertaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 8 },
@@ -185,6 +216,61 @@ function euro(n: number) {
 
 function Watermark() {
   return <Text style={styles.watermark}>SIMULAZIONE</Text>;
+}
+
+// Icone lineari minimali (stile "feather"), riusate per Contatti/Segnalazione guasti.
+function IconPhone({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
+        fill="none"
+        stroke={color}
+        strokeWidth={1.8}
+      />
+    </Svg>
+  );
+}
+
+function IconMonitor({ color = NAVY, size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={2} y={3} width={20} height={14} rx={2} fill="none" stroke={color} strokeWidth={1.8} />
+      <Line x1={8} y1={21} x2={16} y2={21} stroke={color} strokeWidth={1.8} />
+      <Line x1={12} y1={17} x2={12} y2={21} stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+function IconPin({ color = NAVY, size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke={color} strokeWidth={1.8} />
+      <Circle cx={12} cy={10} r={3} fill="none" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+function IconMail({ color = NAVY, size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={2} y={4} width={20} height={16} rx={2} fill="none" stroke={color} strokeWidth={1.8} />
+      <Polyline points="22,6 12,13 2,6" fill="none" stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+function IconTool({ color = '#FFFFFF', size = 11 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"
+        fill="none"
+        stroke={color}
+        strokeWidth={1.8}
+      />
+    </Svg>
+  );
 }
 
 export function BollettaPdf({
@@ -218,13 +304,17 @@ export function BollettaPdf({
   const HeaderPagina = () => (
     <View style={styles.header}>
       <View>
-        <View style={styles.logoRow}>
-          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#E4572E' }}>e</Text>
-          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#EC407A' }}>n</Text>
-          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#42A5F5' }}>e</Text>
-          <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#43A047' }}>l</Text>
-        </View>
-        <Text style={styles.logoSub}>Enel Business — Mercato libero dell'energia</Text>
+        {LOGO_BASE64 ? (
+          <Image src={LOGO_BASE64} style={{ width: 72, height: 26 }} />
+        ) : (
+          <View style={styles.logoRow}>
+            <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#E4572E' }}>e</Text>
+            <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#EC407A' }}>n</Text>
+            <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#42A5F5' }}>e</Text>
+            <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#43A047' }}>l</Text>
+          </View>
+        )}
+        <Text style={[styles.logoSub, { marginTop: 4 }]}>Enel Business — Mercato libero dell'energia</Text>
         {codiceFiscalePiva && (
           <View style={styles.fiscaleBox}>
             <View>
@@ -331,27 +421,77 @@ export function BollettaPdf({
             <Text style={styles.totaleValue}>{euro(risultato.totaleBolletta)}</Text>
           </View>
 
-          <View style={styles.contattiBox}>
-            <Text style={styles.contattiHeader}>Contatti</Text>
-            <View style={styles.contattiBody}>
-              <View style={styles.contattiCol}>
-                <View>
-                  <Text style={styles.contattiLabel}>Sito Web</Text>
-                  <Text style={styles.contattiValue}>vai su enel.it</Text>
+          <View style={styles.contattiRow}>
+            <View style={styles.contattiBox}>
+              <View style={styles.contattiHeader}>
+                <IconPhone />
+                <Text>Contatti</Text>
+              </View>
+              <View style={styles.contattiBody}>
+                <View style={styles.contattiCol}>
+                  <View style={styles.contattiItem}>
+                    <View style={styles.contattiIconWrap}>
+                      <IconMonitor />
+                    </View>
+                    <View>
+                      <Text style={styles.contattiLabel}>Sito Web</Text>
+                      <Text style={styles.contattiValue}>vai su enel.it</Text>
+                    </View>
+                  </View>
+                  <View style={styles.contattiItem}>
+                    <View style={styles.contattiIconWrap}>
+                      <IconPin />
+                    </View>
+                    <View>
+                      <Text style={styles.contattiLabel}>Spazio Enel</Text>
+                      <Text style={styles.contattiValue}>vai su enel.it/spazio-enel</Text>
+                    </View>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.contattiLabel}>Spazio Enel</Text>
-                  <Text style={styles.contattiValue}>vai su enel.it/spazio-enel</Text>
+                <View style={styles.contattiCol}>
+                  <View style={styles.contattiItem}>
+                    <View style={styles.contattiIconWrap}>
+                      <IconPhone color={NAVY} />
+                    </View>
+                    <View>
+                      <Text style={styles.contattiLabel}>Numero gratuito 140</Text>
+                      <Text style={styles.contattiValue}>
+                        Dalle 7:00 alle 22:00{'\n'}dal lun. alla dom. (esclusi festivi)
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.contattiItem}>
+                    <View style={styles.contattiIconWrap}>
+                      <IconMail />
+                    </View>
+                    <View>
+                      <Text style={styles.contattiLabel}>Per posta</Text>
+                      <Text style={styles.contattiValue}>
+                        Enel Energia S.p.A. — Casella Postale{'\n'}8080 — 85100 Potenza
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
-              <View style={styles.contattiCol}>
+            </View>
+
+            <View style={styles.contattiBox}>
+              <View style={styles.guastiHeader}>
+                <IconTool />
+                <Text>Segnalazione guasti</Text>
+              </View>
+              <View style={styles.guastiBody}>
                 <View>
-                  <Text style={styles.contattiLabel}>Numero gratuito 140</Text>
-                  <Text style={styles.contattiValue}>Dalle 7:00 alle 22:00, dal lun. alla dom. (esclusi festivi)</Text>
+                  <Text style={styles.guastiLabel}>PER SEGNALAZIONI 803 500</Text>
+                  <Text style={styles.guastiValue}>Numero Verde da rete fissa e cellulare, tutti i giorni 24 ore su 24</Text>
                 </View>
                 <View>
-                  <Text style={styles.contattiLabel}>Per posta</Text>
-                  <Text style={styles.contattiValue}>Enel Energia S.p.A. — Casella Postale 8080, 85100 Potenza</Text>
+                  <Text style={styles.guastiLabel}>PER INFORMAZIONI</Text>
+                  <Text style={styles.guastiValue}>
+                    Scarica l'app gratuita Guasti e-distribuzione oppure invia un SMS con il tuo Codice{' '}
+                    {input.commodity === 'LUCE' ? 'POD' : 'PDR'}
+                    {pod ? ` ${pod}` : ''} al 320 20 41 500
+                  </Text>
                 </View>
               </View>
             </View>
