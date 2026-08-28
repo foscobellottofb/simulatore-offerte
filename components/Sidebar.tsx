@@ -15,7 +15,7 @@ export function Sidebar() {
   return (
     <>
       {/* Barra superiore visibile solo su mobile */}
-      <div className="md:hidden flex items-center justify-between bg-enel-ink text-white px-4 py-3 sticky top-0 z-30">
+      <div className="md:hidden flex items-center justify-between bg-enel-navy text-white px-4 py-3 sticky top-0 z-30">
         <div>
           <div className="text-base font-semibold tracking-tight">Enel Business</div>
           <div className="text-[11px] text-white/50">Simulatore offerte SMB</div>
@@ -43,7 +43,7 @@ export function Sidebar() {
 
       {/* Menu laterale: sempre visibile da tablet in su, a scomparsa su mobile */}
       <aside
-        className={`w-64 shrink-0 bg-enel-ink text-white flex flex-col
+        className={`w-64 shrink-0 bg-enel-navy text-white flex flex-col
           fixed md:static inset-y-0 left-0 z-50 transform transition-transform duration-200
           ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >

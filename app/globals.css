@@ -30,3 +30,11 @@ body {
 .label {
   @apply text-xs font-medium text-enel-ink/60 uppercase tracking-wide mb-1 block;
 }
+
+.fascia-navy {
+  @apply bg-enel-navy text-white text-xs font-semibold uppercase tracking-wide px-4 py-2.5;
+}
+
+.box-navy {
+  @apply bg-enel-navy text-white rounded-lg;
+}

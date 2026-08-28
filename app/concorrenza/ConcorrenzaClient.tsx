@@ -100,8 +100,9 @@ export function ConcorrenzaClient() {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-5">
-          <div className="font-medium text-sm mb-4">Dati cliente</div>
+        <div className="card overflow-hidden">
+          <div className="fascia-navy">Dati cliente</div>
+          <div className="p-5">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="label">Commodity</label>
@@ -170,18 +171,20 @@ export function ConcorrenzaClient() {
               />
             </div>
           </div>
+          </div>
         </div>
 
-        <div className="card p-5">
-          <div className="font-medium text-sm mb-4">Confronto</div>
+        <div className="card overflow-hidden">
+          <div className="fascia-navy">Confronto</div>
+          <div className="p-5">
           {!migliorEnel || !risultatoConcorrente ? (
             <div className="text-sm text-enel-ink/50">Inserisci prezzo kWh e CCV del concorrente per vedere il confronto.</div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="rounded-lg border border-enel-green/30 bg-enel-green/5 p-4">
-                  <div className="text-xs text-enel-ink/60 mb-1">Enel — {migliorEnel.offerta.nome}</div>
-                  <div className="text-xl font-semibold text-enel-green">{euro(migliorEnel.totaleBolletta)}</div>
+                <div className="box-navy p-4">
+                  <div className="text-xs text-white/70 mb-1">Enel — {migliorEnel.offerta.nome}</div>
+                  <div className="text-xl font-semibold">{euro(migliorEnel.totaleBolletta)}</div>
                 </div>
                 <div className="rounded-lg border border-enel-line p-4">
                   <div className="text-xs text-enel-ink/60 mb-1">{nomeFornitore || 'Concorrente'}</div>
@@ -210,6 +213,7 @@ export function ConcorrenzaClient() {
               )}
             </>
           )}
+          </div>
         </div>
       </div>
     </div>

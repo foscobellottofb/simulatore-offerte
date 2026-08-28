@@ -19,6 +19,7 @@ export function SimulatoreClient() {
   const [loading, setLoading] = useState(true);
   const [selezionata, setSelezionata] = useState<string | null>(null);
   const [nomeCliente, setNomeCliente] = useState('');
+  const [dettaglioEsploso, setDettaglioEsploso] = useState(false);
 
   useEffect(() => {
     Promise.all([fetch('/api/offerte').then((r) => r.json()), fetch('/api/parametri').then((r) => r.json())]).then(
@@ -111,7 +112,7 @@ export function SimulatoreClient() {
       ) : (
         <>
           <div className="card overflow-hidden mb-6">
-            <div className="px-5 py-3 border-b border-enel-line font-medium text-sm">Elenco offerte</div>
+            <div className="fascia-navy">Elenco offerte</div>
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-enel-paper text-enel-ink/60 text-xs uppercase">
@@ -158,30 +159,57 @@ export function SimulatoreClient() {
           </div>
 
           {attiva && (
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="font-medium text-sm">Dettaglio — {attiva.offerta.nome}</div>
-                <button className="btn-primary text-xs" onClick={scaricaPdf}>
-                  Scarica bolletta simulata (PDF)
+            <div className="card overflow-hidden">
+              <div className="fascia-navy flex items-center justify-between">
+                <span>Scontrino dell'energia — {attiva.offerta.nome}</span>
+                <button className="bg-white text-enel-navy rounded px-3 py-1 text-xs font-semibold normal-case tracking-normal" onClick={scaricaPdf}>
+                  Scarica PDF
                 </button>
               </div>
-              <div className="space-y-1 text-sm">
-                <RigaDettaglio label="Spesa energia" valore={attiva.spesaEnergia} />
-                <RigaDettaglio label="Corrispettivo di vendita (CCV)" valore={attiva.spesaCcv} />
-                {attiva.righeDettaglio.map((r, i) => (
-                  <RigaDettaglio key={i} label={r.etichetta} valore={r.valore} />
-                ))}
-                <RigaDettaglio label="Imponibile" valore={attiva.totaleImponibile} bold />
-                <RigaDettaglio label="IVA" valore={attiva.iva} />
-                <div className="flex justify-between pt-3 mt-2 border-t border-enel-line text-base font-semibold">
-                  <span>Totale bolletta</span>
-                  <span>{euro(attiva.totaleBolletta)}</span>
+              <div className="p-5">
+                <div className="space-y-2 text-sm mb-4">
+                  <RigaRiepilogo label="Quota consumi" valore={attiva.riepilogo.quotaConsumi} />
+                  <RigaRiepilogo label="Quota fissa e potenza" valore={attiva.riepilogo.quotaFissaEPotenza} />
+                  {attiva.riepilogo.altrePartite > 0 && <RigaRiepilogo label="Altre partite" valore={attiva.riepilogo.altrePartite} />}
+                  <RigaRiepilogo label="Accise e IVA" valore={attiva.riepilogo.acciseEIva} />
                 </div>
+                <div className="box-navy flex justify-between items-center px-4 py-3 text-base font-semibold">
+                  <span>Totale bolletta</span>
+                  <span className="text-xl">{euro(attiva.totaleBolletta)}</span>
+                </div>
+
+                <button
+                  className="text-xs text-enel-navy font-medium mt-4 flex items-center gap-1 hover:underline"
+                  onClick={() => setDettaglioEsploso((v) => !v)}
+                >
+                  {dettaglioEsploso ? '▾' : '▸'} {dettaglioEsploso ? 'Nascondi' : 'Vedi'} dettaglio importi completo
+                </button>
+
+                {dettaglioEsploso && (
+                  <div className="mt-4 pt-4 border-t border-enel-line space-y-1 text-sm">
+                    <RigaDettaglio label="Spesa energia (materia prima)" valore={attiva.spesaEnergia} />
+                    <RigaDettaglio label="Corrispettivo di vendita (CCV)" valore={attiva.spesaCcv} />
+                    {attiva.righeDettaglio.map((r, i) => (
+                      <RigaDettaglio key={i} label={r.etichetta} valore={r.valore} />
+                    ))}
+                    <RigaDettaglio label="Imponibile" valore={attiva.totaleImponibile} bold />
+                    <RigaDettaglio label="IVA" valore={attiva.iva} />
+                  </div>
+                )}
               </div>
             </div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function RigaRiepilogo({ label, valore }: { label: string; valore: number }) {
+  return (
+    <div className="flex justify-between items-center py-1.5">
+      <span className="text-enel-ink/80">{label}</span>
+      <span className="font-semibold">{euro(valore)}</span>
     </div>
   );
 }

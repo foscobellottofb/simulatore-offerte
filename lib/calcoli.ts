@@ -72,10 +72,10 @@ export function calcolaOfferta(
     const accisa = ACCISA_LUCE_KWH * consumoFatturato;
 
     righeDettaglio.push(
-      { categoria: 'Trasporto e oneri di sistema', etichetta: `Quota fissa (fascia ${rete.fascia})`, valore: speseFisseRete },
-      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota potenza', valore: spesePotenza },
-      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota energia (trasmissione + oneri)', valore: speseEnergiaRete },
-      { categoria: 'Accise e IVA', etichetta: 'Accisa energia elettrica', valore: accisa }
+      { categoria: 'Trasporto e oneri di sistema', etichetta: `Quota fissa (fascia ${rete.fascia})`, valore: speseFisseRete, gruppo: 'FISSA_POTENZA' },
+      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota potenza', valore: spesePotenza, gruppo: 'FISSA_POTENZA' },
+      { categoria: 'Trasporto e oneri di sistema', etichetta: 'Quota energia (trasmissione + oneri)', valore: speseEnergiaRete, gruppo: 'CONSUMI' },
+      { categoria: 'Accise e IVA', etichetta: 'Accisa energia elettrica', valore: accisa, gruppo: 'ACCISE' }
     );
     totaleVociFisse = speseFisseRete + spesePotenza + speseEnergiaRete + accisa;
   } else {
@@ -86,14 +86,15 @@ export function calcolaOfferta(
     const paramGas = parametri.filter((p) => p.commodity === 'GAS' && p.unita !== '%' && !p.chiave.startsWith('ALTRE_VOCI'));
     for (const p of paramGas) {
       const valoreScalato = p.unita === '€/fattura' ? p.valore * (input.giorniFattura / 60) : p.valore * consumoFatturato;
-      righeDettaglio.push({ categoria: p.categoria, etichetta: p.etichetta, valore: valoreScalato });
+      const gruppo: RigaConfronto['gruppo'] = p.categoria === 'Accise e IVA' ? 'ACCISE' : 'FISSA_POTENZA';
+      righeDettaglio.push({ categoria: p.categoria, etichetta: p.etichetta, valore: valoreScalato, gruppo });
       totaleVociFisse += valoreScalato;
     }
   }
 
   const altreVoci = parametroValore(parametri, input.commodity === 'LUCE' ? 'ALTRE_VOCI_LUCE' : 'ALTRE_VOCI_GAS', 0);
   if (altreVoci) {
-    righeDettaglio.push({ categoria: 'Altre voci', etichetta: 'Altre voci', valore: altreVoci });
+    righeDettaglio.push({ categoria: 'Altre voci', etichetta: 'Altre voci', valore: altreVoci, gruppo: 'ALTRE' });
     totaleVociFisse += altreVoci;
   }
 
@@ -103,7 +104,16 @@ export function calcolaOfferta(
   const iva = totaleImponibile * (ivaPercentuale / 100);
   const totaleBolletta = totaleImponibile + iva;
 
-  return { offerta, spesaEnergia, spesaCcv, righeDettaglio, totaleImponibile, iva, totaleBolletta };
+  const sommaGruppo = (g: RigaConfronto['gruppo']) => righeDettaglio.filter((r) => r.gruppo === g).reduce((s, r) => s + r.valore, 0);
+
+  const riepilogo = {
+    quotaConsumi: spesaEnergia + sommaGruppo('CONSUMI'),
+    quotaFissaEPotenza: spesaCcv + sommaGruppo('FISSA_POTENZA'),
+    altrePartite: sommaGruppo('ALTRE'),
+    acciseEIva: sommaGruppo('ACCISE') + iva
+  };
+
+  return { offerta, spesaEnergia, spesaCcv, righeDettaglio, riepilogo, totaleImponibile, iva, totaleBolletta };
 }
 
 export function calcolaTutteLeOfferte(

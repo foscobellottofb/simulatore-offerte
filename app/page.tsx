@@ -9,16 +9,19 @@ export default function HomePage() {
         concorrente e genera una bolletta simulata in PDF.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link href="/simulatore" className="card p-5 hover:border-enel-green transition-colors">
-          <div className="text-sm font-semibold mb-1">1. Simulatore offerte</div>
+        <Link href="/simulatore" className="card p-5 hover:border-enel-navy transition-colors">
+          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">1</div>
+          <div className="text-sm font-semibold mb-1">Simulatore offerte</div>
           <div className="text-xs text-enel-ink/60">Inserisci kW e consumo, confronta le offerte Enel disponibili</div>
         </Link>
-        <Link href="/concorrenza" className="card p-5 hover:border-enel-green transition-colors">
-          <div className="text-sm font-semibold mb-1">2. Confronto concorrenza</div>
+        <Link href="/concorrenza" className="card p-5 hover:border-enel-navy transition-colors">
+          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">2</div>
+          <div className="text-sm font-semibold mb-1">Confronto concorrenza</div>
           <div className="text-xs text-enel-ink/60">Prezzo kWh e CCV a mano o da foto bolletta</div>
         </Link>
-        <Link href="/admin" className="card p-5 hover:border-enel-green transition-colors">
-          <div className="text-sm font-semibold mb-1">3. Dati e parametri</div>
+        <Link href="/admin" className="card p-5 hover:border-enel-navy transition-colors">
+          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">3</div>
+          <div className="text-sm font-semibold mb-1">Dati e parametri</div>
           <div className="text-xs text-enel-ink/60">Aggiorna offerte, accise, IVA e oneri</div>
         </Link>
       </div>

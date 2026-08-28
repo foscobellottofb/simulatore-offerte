@@ -74,7 +74,7 @@ export function AdminClient() {
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-enel-paper text-enel-ink/60 text-xs uppercase">
+            <thead className="bg-enel-navy text-white/80 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-2">Nome</th>
                 <th className="text-left px-4 py-2">Commodity</th>

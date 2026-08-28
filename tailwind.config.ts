@@ -8,6 +8,8 @@ const config: Config = {
         enel: {
           green: '#00843D',
           greenDark: '#00612C',
+          navy: '#0F1F3D',
+          navyLight: '#1B3A66',
           ink: '#12181B',
           paper: '#F7F8F6',
           line: '#E1E5E2',

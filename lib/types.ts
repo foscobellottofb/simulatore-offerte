@@ -42,10 +42,20 @@ export interface InputSimulazione {
   giorniFattura: number;
 }
 
+export type GruppoVoce = 'CONSUMI' | 'FISSA_POTENZA' | 'ACCISE' | 'ALTRE';
+
 export interface RigaConfronto {
   categoria: string;
   etichetta: string;
   valore: number;
+  gruppo: GruppoVoce;
+}
+
+export interface Riepilogo {
+  quotaConsumi: number;
+  quotaFissaEPotenza: number;
+  altrePartite: number;
+  acciseEIva: number;
 }
 
 export interface RisultatoCalcolo {
@@ -53,6 +63,7 @@ export interface RisultatoCalcolo {
   spesaEnergia: number;
   spesaCcv: number;
   righeDettaglio: RigaConfronto[];
+  riepilogo: Riepilogo;
   totaleImponibile: number;
   iva: number;
   totaleBolletta: number;
