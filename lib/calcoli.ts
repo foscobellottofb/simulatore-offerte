@@ -23,6 +23,16 @@ import { calcolaCostiRete, ACCISA_LUCE_KWH } from './tariffeLuce';
 
 const GIORNI_ANNO = 365;
 
+/**
+ * Consumo nel periodo fatturato: se l'utente ha inserito direttamente il
+ * consumo del periodo (es. letto dalla bolletta concorrente per 30/60
+ * giorni), lo usa così com'è, senza passare per un annuo stimato. Se invece
+ * ha inserito un consumo annuo, lo scala sui giorni fattura.
+ */
+export function consumoNelPeriodo(input: InputSimulazione): number {
+  return input.tipoConsumo === 'PERIODO' ? input.consumoKwh : input.consumoKwh * (input.giorniFattura / GIORNI_ANNO);
+}
+
 function offerteFiltrabile(offerta: Offerta, input: InputSimulazione): boolean {
   if (!offerta.attiva) return false;
   if (offerta.commodity !== input.commodity) return false;
@@ -54,8 +64,8 @@ export function calcolaOfferta(
   input: InputSimulazione,
   parametri: ParametroDettaglio[]
 ): RisultatoCalcolo {
-  const fattoreAnno = input.giorniFattura / GIORNI_ANNO;
-  const consumoFatturato = input.consumoAnnuoKwh * fattoreAnno;
+  const fattoreAnno = input.giorniFattura / GIORNI_ANNO; // usato per annualizzare le quote fisse/potenza di rete
+  const consumoFatturato = consumoNelPeriodo(input);
 
   const prezzoUnitario = prezzoEnergiaUnitario(offerta);
   const spesaEnergia = prezzoUnitario * consumoFatturato;

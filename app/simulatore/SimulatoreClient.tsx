@@ -10,8 +10,9 @@ function euro(n: number) {
 
 export function SimulatoreClient() {
   const [commodity, setCommodity] = useState<Commodity>('LUCE');
-  const [consumoAnnuoKwh, setConsumoAnnuoKwh] = useState(5000);
-  const [potenzaKw, setPotenzaKw] = useState(20);
+  const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>('PERIODO');
+  const [consumoKwh, setConsumoKwh] = useState(397);
+  const [potenzaKw, setPotenzaKw] = useState(3);
   const [giorniFattura, setGiorniFattura] = useState(60);
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
@@ -32,10 +33,12 @@ export function SimulatoreClient() {
     );
   }, []);
 
+  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura };
+
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
-    return calcolaTutteLeOfferte(offerte, { commodity, consumoAnnuoKwh, potenzaKw, giorniFattura }, parametri);
-  }, [offerte, parametri, commodity, consumoAnnuoKwh, potenzaKw, giorniFattura, loading]);
+    return calcolaTutteLeOfferte(offerte, input, parametri);
+  }, [offerte, parametri, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, loading]);
 
   const migliore = risultati[0];
   const attiva = risultati.find((r) => r.offerta.id === selezionata) ?? migliore;
@@ -47,7 +50,7 @@ export function SimulatoreClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         risultato: attiva,
-        input: { commodity, consumoAnnuoKwh, potenzaKw, giorniFattura },
+        input,
         nomeCliente,
         pod,
         indirizzoFornitura
@@ -77,14 +80,25 @@ export function SimulatoreClient() {
               <option value="GAS">Gas</option>
             </select>
           </div>
-          <div>
-            <label className="label">Consumo annuo kWh</label>
-            <input
-              type="number"
-              className="input"
-              value={consumoAnnuoKwh}
-              onChange={(e) => setConsumoAnnuoKwh(Number(e.target.value))}
-            />
+          <div className="sm:col-span-2">
+            <label className="label">Consumo</label>
+            <div className="flex gap-2">
+              <select
+                className="input w-32 shrink-0"
+                value={tipoConsumo}
+                onChange={(e) => setTipoConsumo(e.target.value as 'ANNUO' | 'PERIODO')}
+              >
+                <option value="PERIODO">Del periodo</option>
+                <option value="ANNUO">Annuo</option>
+              </select>
+              <input
+                type="number"
+                className="input"
+                value={consumoKwh}
+                onChange={(e) => setConsumoKwh(Number(e.target.value))}
+                placeholder={tipoConsumo === 'PERIODO' ? `kWh nei ${giorniFattura} giorni` : 'kWh in un anno'}
+              />
+            </div>
           </div>
           {commodity === 'LUCE' && (
             <div>

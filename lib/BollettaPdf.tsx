@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { RisultatoCalcolo, InputSimulazione } from './types';
+import { consumoNelPeriodo } from './calcoli';
 
 /**
  * Template ricalcato sulla struttura delle bollette sintetiche Enel Energia:
@@ -147,7 +148,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: LINE,
     paddingTop: 8
-  }
+  },
+
+  contattiBox: {
+    flexDirection: 'row',
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: NAVY,
+    borderRadius: 4,
+    padding: 10,
+    gap: 10
+  },
+  contattiLabel: { fontSize: 6.5, color: '#666', textTransform: 'uppercase', marginBottom: 2 },
+  contattiValue: { fontSize: 8, fontWeight: 700, color: NAVY }
 });
 
 function euro(n: number) {
@@ -172,7 +185,7 @@ export function BollettaPdf({
   indirizzoFornitura?: string;
 }) {
   const dataOggi = new Date().toLocaleDateString('it-IT');
-  const consumoPeriodo = ((input.consumoAnnuoKwh * input.giorniFattura) / 365).toFixed(0);
+  const consumoPeriodo = consumoNelPeriodo(input).toFixed(0);
 
   const gruppi = [
     { label: 'Quota consumi', valore: risultato.riepilogo.quotaConsumi, gruppo: 'CONSUMI' as const },
@@ -278,6 +291,29 @@ export function BollettaPdf({
             <Text style={styles.totaleLabel}>TOTALE SIMULATO</Text>
             <Text style={styles.totaleValue}>{euro(risultato.totaleBolletta)}</Text>
           </View>
+
+          <View style={styles.contattiBox}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contattiLabel}>Sito web</Text>
+              <Text style={styles.contattiValue}>enel.it</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contattiLabel}>Numero gratuito</Text>
+              <Text style={styles.contattiValue}>140</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contattiLabel}>Spazio Enel</Text>
+              <Text style={styles.contattiValue}>enel.it/spazio-enel</Text>
+            </View>
+            <View style={{ flex: 1.4 }}>
+              <Text style={styles.contattiLabel}>Per posta</Text>
+              <Text style={styles.contattiValue}>Enel Energia S.p.A. — Casella Postale 8080, 85100 Potenza</Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 6.5, color: '#999', marginTop: 6 }}>
+            Documento di simulazione: non è previsto alcun pagamento e non è presente alcun codice QR di pagamento.
+          </Text>
         </View>
 
         <Text style={styles.footer}>

@@ -37,7 +37,8 @@ export interface ParametroDettaglio {
 
 export interface InputSimulazione {
   commodity: Commodity;
-  consumoAnnuoKwh: number;
+  consumoKwh: number; // valore inserito dall'utente: annuale oppure del periodo, secondo tipoConsumo
+  tipoConsumo: 'ANNUO' | 'PERIODO';
   potenzaKw: number;
   giorniFattura: number;
 }
