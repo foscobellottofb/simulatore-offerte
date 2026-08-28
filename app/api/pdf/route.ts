@@ -4,10 +4,22 @@ import { BollettaPdf } from '@/lib/BollettaPdf';
 import { RisultatoCalcolo, InputSimulazione } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
-  const body: { risultato: RisultatoCalcolo; input: InputSimulazione; nomeCliente?: string } = await req.json();
+  const body: {
+    risultato: RisultatoCalcolo;
+    input: InputSimulazione;
+    nomeCliente?: string;
+    pod?: string;
+    indirizzoFornitura?: string;
+  } = await req.json();
 
   const buffer = await renderToBuffer(
-    BollettaPdf({ risultato: body.risultato, input: body.input, nomeCliente: body.nomeCliente })
+    BollettaPdf({
+      risultato: body.risultato,
+      input: body.input,
+      nomeCliente: body.nomeCliente,
+      pod: body.pod,
+      indirizzoFornitura: body.indirizzoFornitura
+    })
   );
 
   return new NextResponse(new Uint8Array(buffer), {

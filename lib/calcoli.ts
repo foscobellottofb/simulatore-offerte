@@ -64,6 +64,11 @@ export function calcolaOfferta(
   const righeDettaglio: RigaConfronto[] = [];
   let totaleVociFisse = 0;
 
+  righeDettaglio.push(
+    { categoria: 'Spesa energia', etichetta: 'Spesa per la vendita di energia elettrica', valore: spesaEnergia, gruppo: 'CONSUMI' },
+    { categoria: 'Quota fissa', etichetta: 'Corrispettivo di vendita (CCV)', valore: spesaCcv, gruppo: 'FISSA_POTENZA' }
+  );
+
   if (input.commodity === 'LUCE') {
     const rete = calcolaCostiRete(input.potenzaKw);
     const speseFisseRete = rete.fissaAnno * fattoreAnno;
@@ -107,8 +112,8 @@ export function calcolaOfferta(
   const sommaGruppo = (g: RigaConfronto['gruppo']) => righeDettaglio.filter((r) => r.gruppo === g).reduce((s, r) => s + r.valore, 0);
 
   const riepilogo = {
-    quotaConsumi: spesaEnergia + sommaGruppo('CONSUMI'),
-    quotaFissaEPotenza: spesaCcv + sommaGruppo('FISSA_POTENZA'),
+    quotaConsumi: sommaGruppo('CONSUMI'),
+    quotaFissaEPotenza: sommaGruppo('FISSA_POTENZA'),
     altrePartite: sommaGruppo('ALTRE'),
     acciseEIva: sommaGruppo('ACCISE') + iva
   };

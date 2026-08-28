@@ -19,7 +19,8 @@ export function SimulatoreClient() {
   const [loading, setLoading] = useState(true);
   const [selezionata, setSelezionata] = useState<string | null>(null);
   const [nomeCliente, setNomeCliente] = useState('');
-  const [dettaglioEsploso, setDettaglioEsploso] = useState(false);
+  const [pod, setPod] = useState('');
+  const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
 
   useEffect(() => {
     Promise.all([fetch('/api/offerte').then((r) => r.json()), fetch('/api/parametri').then((r) => r.json())]).then(
@@ -47,7 +48,9 @@ export function SimulatoreClient() {
       body: JSON.stringify({
         risultato: attiva,
         input: { commodity, consumoAnnuoKwh, potenzaKw, giorniFattura },
-        nomeCliente
+        nomeCliente,
+        pod,
+        indirizzoFornitura
       })
     });
     const blob = await res.blob();
@@ -101,6 +104,16 @@ export function SimulatoreClient() {
           <div>
             <label className="label">Nome cliente (opzionale)</label>
             <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+          <div>
+            <label className="label">POD (opzionale, per il PDF)</label>
+            <input className="input" value={pod} onChange={(e) => setPod(e.target.value)} placeholder="IT001E..." />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Indirizzo fornitura (opzionale, per il PDF)</label>
+            <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} />
           </div>
         </div>
       </div>
@@ -167,35 +180,34 @@ export function SimulatoreClient() {
                 </button>
               </div>
               <div className="p-5">
-                <div className="space-y-2 text-sm mb-4">
-                  <RigaRiepilogo label="Quota consumi" valore={attiva.riepilogo.quotaConsumi} />
-                  <RigaRiepilogo label="Quota fissa e potenza" valore={attiva.riepilogo.quotaFissaEPotenza} />
-                  {attiva.riepilogo.altrePartite > 0 && <RigaRiepilogo label="Altre partite" valore={attiva.riepilogo.altrePartite} />}
-                  <RigaRiepilogo label="Accise e IVA" valore={attiva.riepilogo.acciseEIva} />
+                <div className="space-y-1 text-sm mb-4">
+                  <RigaRiepilogo
+                    label="Quota consumi"
+                    valore={attiva.riepilogo.quotaConsumi}
+                    righe={attiva.righeDettaglio.filter((r) => r.gruppo === 'CONSUMI')}
+                  />
+                  <RigaRiepilogo
+                    label="Quota fissa e potenza"
+                    valore={attiva.riepilogo.quotaFissaEPotenza}
+                    righe={attiva.righeDettaglio.filter((r) => r.gruppo === 'FISSA_POTENZA')}
+                  />
+                  {attiva.riepilogo.altrePartite > 0 && (
+                    <RigaRiepilogo
+                      label="Altre partite"
+                      valore={attiva.riepilogo.altrePartite}
+                      righe={attiva.righeDettaglio.filter((r) => r.gruppo === 'ALTRE')}
+                    />
+                  )}
+                  <RigaRiepilogo
+                    label="Accise e IVA"
+                    valore={attiva.riepilogo.acciseEIva}
+                    righe={[...attiva.righeDettaglio.filter((r) => r.gruppo === 'ACCISE'), { categoria: '', etichetta: 'IVA', valore: attiva.iva, gruppo: 'ACCISE' as const }]}
+                  />
                 </div>
                 <div className="box-navy flex justify-between items-center px-4 py-3 text-base font-semibold">
                   <span>Totale bolletta</span>
                   <span className="text-xl">{euro(attiva.totaleBolletta)}</span>
                 </div>
-
-                <button
-                  className="text-xs text-enel-navy font-medium mt-4 flex items-center gap-1 hover:underline"
-                  onClick={() => setDettaglioEsploso((v) => !v)}
-                >
-                  {dettaglioEsploso ? '▾' : '▸'} {dettaglioEsploso ? 'Nascondi' : 'Vedi'} dettaglio importi completo
-                </button>
-
-                {dettaglioEsploso && (
-                  <div className="mt-4 pt-4 border-t border-enel-line space-y-1 text-sm">
-                    <RigaDettaglio label="Spesa energia (materia prima)" valore={attiva.spesaEnergia} />
-                    <RigaDettaglio label="Corrispettivo di vendita (CCV)" valore={attiva.spesaCcv} />
-                    {attiva.righeDettaglio.map((r, i) => (
-                      <RigaDettaglio key={i} label={r.etichetta} valore={r.valore} />
-                    ))}
-                    <RigaDettaglio label="Imponibile" valore={attiva.totaleImponibile} bold />
-                    <RigaDettaglio label="IVA" valore={attiva.iva} />
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -205,11 +217,35 @@ export function SimulatoreClient() {
   );
 }
 
-function RigaRiepilogo({ label, valore }: { label: string; valore: number }) {
+function RigaRiepilogo({
+  label,
+  valore,
+  righe
+}: {
+  label: string;
+  valore: number;
+  righe: { etichetta: string; valore: number }[];
+}) {
+  const [aperto, setAperto] = useState(false);
   return (
-    <div className="flex justify-between items-center py-1.5">
-      <span className="text-enel-ink/80">{label}</span>
-      <span className="font-semibold">{euro(valore)}</span>
+    <div className="border-b border-enel-line/60 last:border-b-0">
+      <button className="w-full flex justify-between items-center py-2 text-left" onClick={() => setAperto((v) => !v)}>
+        <span className="text-enel-ink/80 flex items-center gap-1.5">
+          <span className="text-enel-navy text-[10px]">{aperto ? '▾' : '▸'}</span>
+          {label}
+        </span>
+        <span className="font-semibold">{euro(valore)}</span>
+      </button>
+      {aperto && (
+        <div className="pb-2 pl-4 space-y-1">
+          {righe.map((r, i) => (
+            <div key={i} className="flex justify-between text-xs text-enel-ink/50">
+              <span>di cui {r.etichetta.toLowerCase()}</span>
+              <span>{euro(r.valore)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
