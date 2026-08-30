@@ -275,3 +275,64 @@ export const ARGOMENTI_SEED: Prisma.ArgomentoVenditaCreateManyInput[] = [
   { tipo: 'GENERALE', testo: 'Verifica se sono attive promozioni o vantaggi dedicati ai clienti Enel Business per questo periodo (non inclusi in questo calcolo).', ordinamento: 12 },
   { tipo: 'GENERALE', testo: 'Solidità di un operatore storico: minore rischio di disservizi o cambi di condizioni improvvisi.', ordinamento: 13 }
 ];
+
+/**
+ * Valori medi mensili del PUN Index GME (€/MWh), per il grafico multi-anno
+ * della pagina pubblica "/mercato".
+ *
+ * FONTE: non è stato possibile un accesso automatico diretto al sito GME
+ * (mercatoelettrico.org) in fase di sviluppo; questi valori sono stati
+ * ricostruiti da più fonti secondarie che pubblicano l'indice ufficiale
+ * (portali di fornitori ed energy advisor), incrociando i dati dove
+ * disponibili. I mesi con "stimato: true" sono quelli per cui non è stata
+ * trovata una fonte esplicita e il valore è stato interpolato dal contesto
+ * (andamento del mese prima/dopo): usali con cautela e verificali sul sito
+ * ufficiale GME (Statistiche → Sintesi MGP) prima di mostrarli a un cliente
+ * in modo puntuale. Da Admin → "PUN mensile" puoi correggerli in qualsiasi
+ * momento, anche mese per mese quando arriva il dato ufficiale.
+ */
+export const PUN_MENSILE_SEED: Prisma.PunMensileCreateManyInput[] = [
+  // 2024
+  { anno: 2024, mese: 1, valoreMwh: 97.0, stimato: true },
+  { anno: 2024, mese: 2, valoreMwh: 87.6, stimato: false },
+  { anno: 2024, mese: 3, valoreMwh: 85.0, stimato: true },
+  { anno: 2024, mese: 4, valoreMwh: 86.8, stimato: false },
+  { anno: 2024, mese: 5, valoreMwh: 94.9, stimato: false },
+  { anno: 2024, mese: 6, valoreMwh: 103.2, stimato: false },
+  { anno: 2024, mese: 7, valoreMwh: 112.3, stimato: false },
+  { anno: 2024, mese: 8, valoreMwh: 128.4, stimato: false },
+  { anno: 2024, mese: 9, valoreMwh: 117.1, stimato: false },
+  { anno: 2024, mese: 10, valoreMwh: 116.7, stimato: false },
+  { anno: 2024, mese: 11, valoreMwh: 130.9, stimato: false },
+  { anno: 2024, mese: 12, valoreMwh: 135.1, stimato: false },
+  // 2025
+  { anno: 2025, mese: 1, valoreMwh: 143.0, stimato: false },
+  { anno: 2025, mese: 2, valoreMwh: 150.4, stimato: false },
+  { anno: 2025, mese: 3, valoreMwh: 120.6, stimato: false },
+  { anno: 2025, mese: 4, valoreMwh: 99.9, stimato: false },
+  { anno: 2025, mese: 5, valoreMwh: 93.6, stimato: false },
+  { anno: 2025, mese: 6, valoreMwh: 111.8, stimato: false },
+  { anno: 2025, mese: 7, valoreMwh: 113.1, stimato: false },
+  { anno: 2025, mese: 8, valoreMwh: 108.8, stimato: false },
+  { anno: 2025, mese: 9, valoreMwh: 109.1, stimato: false },
+  { anno: 2025, mese: 10, valoreMwh: 111.0, stimato: false },
+  { anno: 2025, mese: 11, valoreMwh: 110.0, stimato: true },
+  { anno: 2025, mese: 12, valoreMwh: 113.0, stimato: true },
+  // 2026 (fino ad agosto, incluso il parziale)
+  { anno: 2026, mese: 1, valoreMwh: 135.0, stimato: false },
+  { anno: 2026, mese: 2, valoreMwh: 114.0, stimato: false },
+  { anno: 2026, mese: 3, valoreMwh: 120.0, stimato: true },
+  { anno: 2026, mese: 4, valoreMwh: 120.0, stimato: true },
+  { anno: 2026, mese: 5, valoreMwh: 120.0, stimato: true },
+  { anno: 2026, mese: 6, valoreMwh: 154.0, stimato: true },
+  { anno: 2026, mese: 7, valoreMwh: 186.2, stimato: false },
+  { anno: 2026, mese: 8, valoreMwh: 176.3, stimato: true }
+];
+
+/**
+ * Tabella vuota di partenza: le offerte dei concorrenti non hanno una fonte
+ * pubblica affidabile e vanno inserite a mano dal team commerciale, man mano
+ * che le raccogliete sul campo. Struttura pronta, editabile da Admin →
+ * "Concorrenza".
+ */
+export const OFFERTE_CONCORRENTI_SEED: Prisma.OffertaConcorrenteCreateManyInput[] = [];

@@ -101,3 +101,27 @@ export interface RisultatoCalcolo {
   iva: number;
   totaleBolletta: number;
 }
+
+// PUN mensile (€/MWh), pagina pubblica "/mercato".
+export interface PunMensile {
+  id: string;
+  anno: number;
+  mese: number; // 1..12
+  valoreMwh: number;
+  stimato: boolean;
+}
+
+// Offerta concorrente indicativa, pagina pubblica "/mercato".
+export interface OffertaConcorrente {
+  id: string;
+  fornitore: string;
+  nomeOfferta: string;
+  commodity: Commodity;
+  tipoPrezzo: string; // "FISSO" | "VARIABILE"
+  prezzoKwh: number | null;
+  ccvMensile: number | null;
+  canale: string; // "WEB" | "ALTRO"
+  note: string | null;
+  attiva: boolean;
+  ordinamento: number;
+}

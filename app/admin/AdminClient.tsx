@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, OffertaConcorrente } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -16,9 +16,12 @@ export function AdminClient() {
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
+  const [pun, setPun] = useState<PunMensile[]>([]);
+  const [concorrenti, setConcorrenti] = useState<OffertaConcorrente[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [salvandoRete, setSalvandoRete] = useState(false);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'argomentario'>('offerte');
+  const [salvandoPun, setSalvandoPun] = useState(false);
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -33,6 +36,8 @@ export function AdminClient() {
     ricaricaArgomenti();
     fetch('/api/parametri').then((r) => r.json()).then(setParametri);
     fetch('/api/fasce-rete').then((r) => r.json()).then(setFasceRete);
+    fetch('/api/pun').then((r) => r.json()).then(setPun);
+    fetch('/api/concorrenti').then((r) => r.json()).then(setConcorrenti);
   }, []);
 
   function aggiornaParametro(id: string, valore: number) {
@@ -61,6 +66,116 @@ export function AdminClient() {
       body: JSON.stringify(fasceRete)
     });
     setSalvandoRete(false);
+  }
+
+  async function aggiungiFascia() {
+    const fascia = prompt('Codice fascia (es. BTA7):');
+    if (!fascia || !fascia.trim()) return;
+    const res = await fetch('/api/fasce-rete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fascia: fascia.trim() })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? 'Errore nella creazione della fascia.');
+      return;
+    }
+    const nuova = await res.json();
+    setFasceRete((prev) => [...prev, nuova]);
+  }
+
+  async function eliminaFascia(id: string, fascia: string) {
+    if (!confirm(`Eliminare la fascia ${fascia}? Le offerte che ricadono in questa fascia di potenza smetteranno di trovare i costi di rete corrispondenti.`)) return;
+    await fetch(`/api/fasce-rete/${id}`, { method: 'DELETE' });
+    setFasceRete((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function aggiornaPun(id: string, valoreMwh: number) {
+    setPun((prev) => prev.map((p) => (p.id === id ? { ...p, valoreMwh } : p)));
+  }
+
+  async function salvaPun() {
+    setSalvandoPun(true);
+    await fetch('/api/pun', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pun.map((p) => ({ id: p.id, valoreMwh: p.valoreMwh })))
+    });
+    setSalvandoPun(false);
+  }
+
+  async function aggiungiMesePun() {
+    const meseStr = prompt('Mese e anno, formato MM-AAAA (es. 09-2026):');
+    if (!meseStr) return;
+    const match = meseStr.trim().match(/^(\d{1,2})-(\d{4})$/);
+    if (!match) {
+      alert('Formato non valido, usa MM-AAAA (es. 09-2026).');
+      return;
+    }
+    const mese = Number(match[1]);
+    const anno = Number(match[2]);
+    const valoreStr = prompt('Valore PUN in €/MWh:');
+    if (!valoreStr) return;
+    const res = await fetch('/api/pun', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anno, mese, valoreMwh: Number(valoreStr) })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? 'Errore nel salvataggio.');
+      return;
+    }
+    const nuovo = await res.json();
+    setPun((prev) => [...prev.filter((p) => !(p.anno === anno && p.mese === mese)), nuovo]);
+  }
+
+  function aggiornaCampoConcorrente(id: string, campo: keyof OffertaConcorrente, valore: string | number) {
+    setConcorrenti((prev) => prev.map((c) => (c.id === id ? { ...c, [campo]: valore } : c)));
+  }
+
+  async function salvaConcorrente(id: string) {
+    const c = concorrenti.find((x) => x.id === id);
+    if (!c) return;
+    await fetch(`/api/concorrenti/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fornitore: c.fornitore,
+        nomeOfferta: c.nomeOfferta,
+        tipoPrezzo: c.tipoPrezzo,
+        prezzoKwh: c.prezzoKwh,
+        ccvMensile: c.ccvMensile,
+        canale: c.canale,
+        note: c.note
+      })
+    });
+  }
+
+  async function eliminaConcorrente(id: string) {
+    if (!confirm('Eliminare questa offerta concorrente?')) return;
+    await fetch(`/api/concorrenti/${id}`, { method: 'DELETE' });
+    setConcorrenti((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  async function aggiungiConcorrente() {
+    const res = await fetch('/api/concorrenti', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fornitore: 'Nuovo fornitore',
+        nomeOfferta: 'Nome offerta',
+        commodity: 'LUCE',
+        tipoPrezzo: 'FISSO',
+        prezzoKwh: 0,
+        ccvMensile: 0,
+        canale: 'ALTRO',
+        ordinamento: 99
+      })
+    });
+    const nuovo = await res.json();
+    setConcorrenti((prev) => [...prev, nuovo]);
   }
 
   async function disattivaOfferta(id: string) {
@@ -139,6 +254,12 @@ export function AdminClient() {
         </button>
         <button className={tab === 'rete' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('rete')}>
           Rete e oneri ({fasceRete.length})
+        </button>
+        <button className={tab === 'pun' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('pun')}>
+          PUN mensile ({pun.length})
+        </button>
+        <button className={tab === 'concorrenza' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('concorrenza')}>
+          Concorrenza ({concorrenti.length})
         </button>
         <button
           className={tab === 'argomentario' ? 'btn-primary text-xs' : 'btn-secondary text-xs'}
@@ -231,13 +352,18 @@ export function AdminClient() {
 
       {tab === 'rete' && (
         <div className="card p-5">
-          <p className="text-xs text-enel-ink/50 mb-4">
-            Componenti ARERA di distribuzione e oneri di sistema (ASOS/ARIM), una riga per fascia di potenza. Gli
-            oneri ASOS/ARIM cambiano ogni trimestre con delibera ARERA: aggiornali qui, senza toccare il codice.
-            Trasmissione, misura e accisa (comuni a tutte le fasce) sono invece nella tab "Parametri di dettaglio".
-          </p>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
+              Componenti ARERA di distribuzione e oneri di sistema (ASOS/ARIM), una riga per fascia di potenza. Gli
+              oneri ASOS/ARIM cambiano ogni trimestre con delibera ARERA: aggiornali qui, senza toccare il codice.
+              Trasmissione, misura e accisa (comuni a tutte le fasce) sono invece nella tab "Parametri di dettaglio".
+            </p>
+            <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiFascia}>
+              + Aggiungi fascia
+            </button>
+          </div>
           <div className="overflow-x-auto">
-            <table className="text-xs min-w-[1100px] w-full">
+            <table className="text-xs min-w-[1500px] w-full">
               <thead className="bg-enel-navy text-white/80 uppercase">
                 <tr>
                   <th className="text-left px-3 py-2">Fascia</th>
@@ -250,6 +376,7 @@ export function AdminClient() {
                   <th className="text-right px-3 py-2">ARIM fissa<br />€/POD/anno</th>
                   <th className="text-right px-3 py-2">ARIM potenza<br />€/kW/anno</th>
                   <th className="text-right px-3 py-2">ARIM energia<br />€/kWh</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -275,13 +402,18 @@ export function AdminClient() {
                       <td key={campo} className="px-1.5 py-1.5">
                         <input
                           type="number"
-                          step="0.0001"
-                          className="input w-24 text-right text-xs py-1"
+                          step="0.000001"
+                          className="input w-32 text-right text-xs py-1 px-2"
                           value={f[campo] as number}
                           onChange={(e) => aggiornaFascia(f.id, campo, Number(e.target.value))}
                         />
                       </td>
                     ))}
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <button className="text-xs text-red-600 hover:underline" onClick={() => eliminaFascia(f.id, f.fascia)}>
+                        Elimina
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -289,12 +421,146 @@ export function AdminClient() {
           </div>
           {fasceRete.length === 0 && (
             <div className="text-xs text-enel-ink/40 mt-4">
-              Nessuna fascia trovata: lancia il seed (endpoint /api/seed?key=…) per caricare i valori di partenza.
+              Nessuna fascia trovata: lancia il seed (endpoint /api/seed?key=…) per caricare i valori di partenza, o
+              usa "+ Aggiungi fascia" per crearne una a mano.
             </div>
           )}
           <button className="btn-primary text-sm mt-4" onClick={salvaFasceRete} disabled={salvandoRete || fasceRete.length === 0}>
             {salvandoRete ? 'Salvataggio…' : 'Salva rete e oneri'}
           </button>
+        </div>
+      )}
+
+      {tab === 'pun' && (
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
+              Valore medio mensile del PUN Index GME (€/MWh), usato nel grafico della pagina pubblica "/mercato".
+              Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
+              successivo), o correggi valori stimati con quelli ufficiali.
+            </p>
+            <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePun}>
+              + Aggiungi mese
+            </button>
+          </div>
+          {Array.from(new Set(pun.map((p) => p.anno))).sort((a, b) => b - a).map((anno) => (
+            <div key={anno} className="mb-5">
+              <div className="text-sm font-semibold mb-2">{anno}</div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {pun
+                  .filter((p) => p.anno === anno)
+                  .sort((a, b) => a.mese - b.mese)
+                  .map((p) => (
+                    <div key={p.id} className="border border-enel-line rounded-lg p-2">
+                      <div className="text-[10px] text-enel-ink/50 mb-1">
+                        {['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'][p.mese - 1]}
+                        {p.stimato && <span className="text-enel-amber"> · stima</span>}
+                      </div>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="input text-xs py-1 px-2"
+                        value={p.valoreMwh}
+                        onChange={(e) => aggiornaPun(p.id, Number(e.target.value))}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+          {pun.length === 0 && (
+            <div className="text-xs text-enel-ink/40 mb-4">
+              Nessun dato: lancia il seed (endpoint /api/seed/mercato?key=…) per caricare la serie storica di
+              partenza.
+            </div>
+          )}
+          <button className="btn-primary text-sm mt-2" onClick={salvaPun} disabled={salvandoPun || pun.length === 0}>
+            {salvandoPun ? 'Salvataggio…' : 'Salva PUN mensile'}
+          </button>
+        </div>
+      )}
+
+      {tab === 'concorrenza' && (
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
+              Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato". Nessuna fonte pubblica le
+              aggrega automaticamente: inseriscile man mano che le raccogliete. Distingui sempre le offerte "solo
+              web" (canale WEB) dalle altre (canale ALTRO), perché non sono condizioni replicabili in trattativa
+              diretta.
+            </p>
+            <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiConcorrente}>
+              + Aggiungi offerta
+            </button>
+          </div>
+          <div className="space-y-3">
+            {concorrenti.map((c) => (
+              <div key={c.id} className="border border-enel-line rounded-lg p-3">
+                <div className="grid sm:grid-cols-6 gap-2 mb-2">
+                  <input
+                    className="input text-xs py-1.5 px-2 sm:col-span-1"
+                    placeholder="Fornitore"
+                    value={c.fornitore}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'fornitore', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <input
+                    className="input text-xs py-1.5 px-2 sm:col-span-2"
+                    placeholder="Nome offerta"
+                    value={c.nomeOfferta}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'nomeOfferta', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <select
+                    className="input text-xs py-1.5 px-2"
+                    value={c.tipoPrezzo}
+                    onChange={(e) => {
+                      aggiornaCampoConcorrente(c.id, 'tipoPrezzo', e.target.value);
+                      setTimeout(() => salvaConcorrente(c.id), 0);
+                    }}
+                  >
+                    <option value="FISSO">Fisso</option>
+                    <option value="VARIABILE">Variabile</option>
+                  </select>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    className="input text-xs py-1.5 px-2"
+                    placeholder="€/kWh"
+                    value={c.prezzoKwh ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'prezzoKwh', Number(e.target.value))}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <select
+                    className="input text-xs py-1.5 px-2"
+                    value={c.canale}
+                    onChange={(e) => {
+                      aggiornaCampoConcorrente(c.id, 'canale', e.target.value);
+                      setTimeout(() => salvaConcorrente(c.id), 0);
+                    }}
+                  >
+                    <option value="WEB">Web</option>
+                    <option value="ALTRO">Altro canale</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    className="input text-xs py-1.5 px-2 flex-1"
+                    placeholder="Note (es. condizioni particolari, data rilevazione)"
+                    value={c.note ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'note', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <button className="text-xs text-red-600 hover:underline whitespace-nowrap" onClick={() => eliminaConcorrente(c.id)}>
+                    Elimina
+                  </button>
+                </div>
+              </div>
+            ))}
+            {concorrenti.length === 0 && (
+              <div className="text-xs text-enel-ink/40">Nessuna offerta concorrente inserita. Usa "+ Aggiungi offerta".</div>
+            )}
+          </div>
         </div>
       )}
 

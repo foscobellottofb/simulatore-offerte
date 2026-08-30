@@ -11,7 +11,14 @@ import { COOKIE_NAME, tokenValido } from '@/lib/auth';
  * /api/seed resta protetto a parte dalla sua chiave SEED_SECRET (invariato).
  */
 
-const PREFIX_SCRITTURA_PROTETTA = ['/api/offerte', '/api/parametri', '/api/fasce-rete', '/api/argomenti'];
+const PREFIX_SCRITTURA_PROTETTA = [
+  '/api/offerte',
+  '/api/parametri',
+  '/api/fasce-rete',
+  '/api/argomenti',
+  '/api/pun',
+  '/api/concorrenti'
+];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -39,5 +46,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/offerte/:path*', '/api/parametri/:path*', '/api/fasce-rete/:path*', '/api/argomenti/:path*']
+  matcher: [
+    '/admin/:path*',
+    '/api/offerte/:path*',
+    '/api/parametri/:path*',
+    '/api/fasce-rete/:path*',
+    '/api/argomenti/:path*',
+    '/api/pun/:path*',
+    '/api/concorrenti/:path*'
+  ]
 };

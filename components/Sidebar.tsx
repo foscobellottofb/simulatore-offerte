@@ -6,6 +6,7 @@ import Link from 'next/link';
 const NAV = [
   { href: '/simulatore', label: 'Simulatore offerte', hint: 'kW, consumo → confronto' },
   { href: '/concorrenza', label: 'Confronto concorrenza', hint: 'prezzo, CCV, foto bolletta' },
+  { href: '/mercato', label: 'Mercato dell\'energia', hint: 'PUN, storico, concorrenza' },
   { href: '/admin', label: 'Dati e parametri', hint: 'offerte e voci di dettaglio' }
 ];
 

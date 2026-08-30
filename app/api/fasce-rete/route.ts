@@ -39,3 +39,38 @@ export async function PUT(req: NextRequest) {
   const fasce = await prisma.fasciaRete.findMany({ orderBy: { ordinamento: 'asc' } });
   return NextResponse.json(fasce);
 }
+
+// Crea una nuova fascia (es. per aggiungere una fascia GAS in futuro, o una
+// suddivisione extra oltre a BTA1..BTA6). Valori numerici a 0 di default:
+// vanno compilati subito dopo dalla tabella di Admin.
+export async function POST(req: NextRequest) {
+  const body: { fascia?: string; etichetta?: string; minKw?: number; maxKw?: number | null; commodity?: 'LUCE' | 'GAS' } =
+    await req.json();
+
+  if (!body.fascia || !body.fascia.trim()) {
+    return NextResponse.json({ error: 'Il codice fascia (es. BTA7) è obbligatorio.' }, { status: 400 });
+  }
+
+  const ultimaOrdinamento = await prisma.fasciaRete.aggregate({ _max: { ordinamento: true } });
+
+  const fascia = await prisma.fasciaRete.create({
+    data: {
+      fascia: body.fascia.trim(),
+      etichetta: body.etichetta?.trim() || body.fascia.trim(),
+      commodity: body.commodity ?? 'LUCE',
+      minKw: body.minKw ?? 0,
+      maxKw: body.maxKw ?? null,
+      ordinamento: (ultimaOrdinamento._max.ordinamento ?? 0) + 1,
+      distribuzioneFissaAnno: 0,
+      distribuzionePotenzaAnno: 0,
+      distribuzioneEnergiaKwh: 0,
+      asosFissaAnno: 0,
+      asosPotenzaAnno: 0,
+      asosEnergiaKwh: 0,
+      arimFissaAnno: 0,
+      arimPotenzaAnno: 0,
+      arimEnergiaKwh: 0
+    }
+  });
+  return NextResponse.json(fascia, { status: 201 });
+}

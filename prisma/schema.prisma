@@ -138,3 +138,38 @@ model Simulazione {
 
   createdAt DateTime @default(now())
 }
+
+// Valore medio mensile del PUN Index GME (€/MWh), usato nella pagina pubblica
+// "/mercato" per il grafico multi-anno e per dare contesto ai consulenti sul
+// mercato all'ingrosso. "stimato" segnala i mesi presi da fonti secondarie
+// (non dal sito GME direttamente) o non ancora confermati, da verificare.
+model PunMensile {
+  id        String   @id @default(cuid())
+  anno      Int
+  mese      Int // 1..12
+  valoreMwh Float // €/MWh
+  stimato   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([anno, mese])
+}
+
+// Prezzi indicativi delle principali offerte concorrenti, inseriti a mano
+// dal team commerciale (nessuna fonte pubblica affidabile li aggrega). Il
+// campo "canale" distingue le offerte "solo web" (spesso con condizioni non
+// replicabili in un contatto commerciale diretto) da quelle vendute anche
+// tramite altri canali, per non confrontarle come se fossero equivalenti.
+model OffertaConcorrente {
+  id          String    @id @default(cuid())
+  fornitore   String // es. "A2A", "Iren", "Eni Plenitude"
+  nomeOfferta String
+  commodity   Commodity
+  tipoPrezzo  String // "FISSO" | "VARIABILE"
+  prezzoKwh   Float? // €/kWh se fisso, oppure spread/alfa se variabile
+  ccvMensile  Float?
+  canale      String // "WEB" | "ALTRO"
+  note        String?
+  attiva      Boolean  @default(true)
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
