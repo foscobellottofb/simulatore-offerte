@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+// Vedi commento in app/api/fasce-rete/route.ts: senza questa direttiva
+// Next.js metterebbe in cache il risultato di questa GET al momento del
+// build, ignorando modifiche fatte da Admin dopo il deploy.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const parametri = await prisma.parametroDettaglio.findMany({ orderBy: { ordinamento: 'asc' } });
   return NextResponse.json(parametri);

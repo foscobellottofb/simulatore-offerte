@@ -4,6 +4,14 @@ import { prisma } from '@/lib/db';
 // GET è pubblico: il simulatore (usato da tutti, senza login) ne ha bisogno
 // per calcolare le bollette. La scrittura (PUT) è invece riservata
 // all'admin: la protezione è applicata centralmente in middleware.ts.
+//
+// force-dynamic è necessario perché questa GET non legge nulla dalla
+// request (niente searchParams/cookies/headers): senza questa direttiva
+// Next.js la tratta come route "statica" e ne mette in cache il risultato
+// in fase di BUILD, quindi ogni utente vedrebbe per sempre i dati presenti
+// nel database al momento del build, ignorando modifiche/seed successivi.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const fasce = await prisma.fasciaRete.findMany({ orderBy: { ordinamento: 'asc' } });
   return NextResponse.json(fasce);

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+// Già dinamica di fatto (usa req.nextUrl.searchParams), ma esplicitiamo lo
+// stesso per coerenza con le altre route e per sicurezza in caso qualcuno
+// tolga in futuro l'uso di searchParams.
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const commodity = req.nextUrl.searchParams.get('commodity');
   const offerte = await prisma.offerta.findMany({
