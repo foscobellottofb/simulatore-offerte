@@ -10,8 +10,10 @@ const anthropic = new Anthropic();
 export const maxDuration = 60;
 
 const SYSTEM_PROMPT = `Sei un analista che legge bollette di energia elettrica e gas italiane di
-fornitori concorrenti (foto o PDF, anche multipagina) per aiutare un consulente commerciale Enel a
-confrontarle correttamente con le proprie offerte.
+fornitori concorrenti (una o più foto delle pagine della bolletta, oppure un PDF multipagina) per
+aiutare un consulente commerciale Enel a confrontarle correttamente con le proprie offerte. Se ricevi
+più immagini, sono le pagine della STESSA bolletta nell'ordine in cui te le passo: leggile come un
+unico documento, non come bollette separate.
 
 Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 
@@ -94,13 +96,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password operatore errata o mancante.' }, { status: 401 });
   }
 
-  const { imageBase64, mediaType } = await req.json();
+  const body = await req.json();
+  // "pagine" è il formato nuovo (una o più foto/PDF), con fallback al vecchio
+  // formato a singolo file per non rompere eventuali chiamate già in volo.
+  const pagine: { data: string; mediaType: string }[] = Array.isArray(body.pagine)
+    ? body.pagine
+    : body.imageBase64
+      ? [{ data: body.imageBase64, mediaType: body.mediaType }]
+      : [];
 
-  if (!imageBase64) {
+  if (pagine.length === 0) {
     return NextResponse.json({ error: 'File mancante' }, { status: 400 });
   }
-
-  const isPdf = mediaType === 'application/pdf';
 
   let message;
   try {
@@ -112,10 +119,19 @@ export async function POST(req: NextRequest) {
         {
           role: 'user',
           content: [
-            (isPdf
-              ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
-              : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } }) as any,
-            { type: 'text', text: 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.' }
+            ...pagine.map(
+              (p) =>
+                (p.mediaType === 'application/pdf'
+                  ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: p.data } }
+                  : { type: 'image', source: { type: 'base64', media_type: p.mediaType || 'image/jpeg', data: p.data } }) as any
+            ),
+            {
+              type: 'text',
+              text:
+                pagine.length > 1
+                  ? `Analizza queste ${pagine.length} pagine della stessa bolletta secondo le istruzioni, includendo eventuali costi extra.`
+                  : 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.'
+            }
           ]
         }
       ]

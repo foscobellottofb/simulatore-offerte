@@ -102,15 +102,41 @@ export function ConcorrenzaClient() {
   }, [deltaPeriodo, giorniFattura]);
 
   const LIMITE_FILE_MB = 4;
+  const LIMITE_FILE_TOTALE_MB = 8;
+
+  function leggiFileBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = () => reject(new Error('Lettura file non riuscita'));
+      reader.readAsDataURL(file);
+    });
+  }
 
   async function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
 
-    if (file.size > LIMITE_FILE_MB * 1024 * 1024) {
+    const contienePdf = files.some((f) => f.type === 'application/pdf');
+    if (contienePdf && files.length > 1) {
+      setOcrStato('errore');
+      setOcrNote('Un PDF è già multipagina: carica un solo PDF, oppure più foto (una per pagina) invece del PDF.');
+      return;
+    }
+
+    const dimensioneTotale = files.reduce((s, f) => s + f.size, 0);
+    const fileTroppoGrande = files.find((f) => f.size > LIMITE_FILE_MB * 1024 * 1024);
+    if (fileTroppoGrande) {
       setOcrStato('errore');
       setOcrNote(
-        `File troppo grande (${(file.size / 1024 / 1024).toFixed(1)} MB, limite ${LIMITE_FILE_MB} MB). Se è un PDF con più pagine, prova a esportare/fotografare solo la pagina con i dati economici, oppure comprimi il PDF prima di caricarlo.`
+        `"${fileTroppoGrande.name}" è troppo grande (${(fileTroppoGrande.size / 1024 / 1024).toFixed(1)} MB, limite ${LIMITE_FILE_MB} MB per file).`
+      );
+      return;
+    }
+    if (dimensioneTotale > LIMITE_FILE_TOTALE_MB * 1024 * 1024) {
+      setOcrStato('errore');
+      setOcrNote(
+        `Le foto insieme superano ${LIMITE_FILE_TOTALE_MB} MB (limite totale). Riduci il numero di foto o comprimile.`
       );
       return;
     }
@@ -118,68 +144,66 @@ export function ConcorrenzaClient() {
     setOcrStato('analisi');
     setOcrNote(null);
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
+    try {
+      const pagine = await Promise.all(
+        files.map(async (file) => ({ data: await leggiFileBase64(file), mediaType: file.type }))
+      );
+
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-operator-key': operatorKey },
+        body: JSON.stringify({ pagine })
+      });
+
+      let data: any = null;
       try {
-        const res = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-operator-key': operatorKey },
-          body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
-        });
-
-        let data: any = null;
-        try {
-          data = await res.json();
-        } catch {
-          setOcrStato('errore');
-          setOcrNote(`Il server ha risposto in modo inatteso (status ${res.status}). Riprova, o usa un file più piccolo.`);
-          return;
-        }
-
-        if (res.status === 401) {
-          sessionStorage.removeItem('operatorKey');
-          setOperatorKey('');
-          setOcrStato('errore');
-          setOcrNote(data.error ?? 'Password operatore errata o mancante.');
-          return;
-        }
-        if (!res.ok) {
-          setOcrStato('errore');
-          setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
-          return;
-        }
-        const prezzo = commodity === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
-        if (prezzo) setPrezzoKwh(prezzo);
-        if (data.ccvMensile) setCcv(data.ccvMensile);
-        if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
-        if (data.fornitore) setNomeFornitore(data.fornitore);
-        if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
-        if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
-        if (data.giorniFattura) {
-          setGiorniFattura(data.giorniFattura);
-          setTipoConsumo('PERIODO');
-        }
-        if (data.nomeCliente) setNomeCliente(data.nomeCliente);
-        if (data.pod) setPod(data.pod);
-        if (data.indirizzoFornitura) setIndirizzoFornitura(data.indirizzoFornitura);
-        if (data.citta) setCitta(data.citta);
-        if (data.codiceFiscalePiva) setCodiceFiscalePiva(data.codiceFiscalePiva);
-        setAnalisiIA(data.analisi ?? null);
-        setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
-        setOcrStato('ok');
-        if (data.confidenza !== 'alta' || data.note) {
-          setOcrNote(
-            `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
-          );
-        }
-      } catch (err) {
+        data = await res.json();
+      } catch {
         setOcrStato('errore');
-        setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
+        setOcrNote(`Il server ha risposto in modo inatteso (status ${res.status}). Riprova, o usa file più piccoli.`);
+        return;
       }
-    };
-    reader.readAsDataURL(file);
 
+      if (res.status === 401) {
+        sessionStorage.removeItem('operatorKey');
+        setOperatorKey('');
+        setOcrStato('errore');
+        setOcrNote(data.error ?? 'Password operatore errata o mancante.');
+        return;
+      }
+      if (!res.ok) {
+        setOcrStato('errore');
+        setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
+        return;
+      }
+      const prezzo = commodity === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
+      if (prezzo) setPrezzoKwh(prezzo);
+      if (data.ccvMensile) setCcv(data.ccvMensile);
+      if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
+      if (data.fornitore) setNomeFornitore(data.fornitore);
+      if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
+      if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
+      if (data.giorniFattura) {
+        setGiorniFattura(data.giorniFattura);
+        setTipoConsumo('PERIODO');
+      }
+      if (data.nomeCliente) setNomeCliente(data.nomeCliente);
+      if (data.pod) setPod(data.pod);
+      if (data.indirizzoFornitura) setIndirizzoFornitura(data.indirizzoFornitura);
+      if (data.citta) setCitta(data.citta);
+      if (data.codiceFiscalePiva) setCodiceFiscalePiva(data.codiceFiscalePiva);
+      setAnalisiIA(data.analisi ?? null);
+      setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
+      setOcrStato('ok');
+      if (data.confidenza !== 'alta' || data.note) {
+        setOcrNote(
+          `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
+        );
+      }
+    } catch (err) {
+      setOcrStato('errore');
+      setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
+    }
   }
 
   async function scaricaPdfEnel() {
@@ -290,10 +314,13 @@ export function ConcorrenzaClient() {
 
             <div className="font-medium text-sm mb-3 pt-3 border-t border-enel-line">Bolletta concorrente</div>
 
-            <label className="label">Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)</label>
+            <label className="label">
+              Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)
+              <AiutoCampo testo="Bolletta cartacea di più pagine? Seleziona tutte le foto insieme (tieni premuto Ctrl/Cmd nel selettore file, o scattale e scegli 'seleziona tutte'): vengono lette come un unico documento. Un PDF invece va caricato da solo, è già multipagina." />
+            </label>
             {operatorKey ? (
               <>
-                <input type="file" accept="image/*,.pdf" className="input mb-2" onChange={handleFoto} />
+                <input type="file" accept="image/*,.pdf" multiple className="input mb-2" onChange={handleFoto} />
                 <button
                   className="text-[11px] text-enel-ink/30 hover:underline mb-2"
                   onClick={() => {
