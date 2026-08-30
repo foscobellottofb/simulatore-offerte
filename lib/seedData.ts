@@ -272,7 +272,7 @@ export const ARGOMENTI_SEED: Prisma.ArgomentoVenditaCreateManyInput[] = [
   },
   { tipo: 'GENERALE', testo: 'Rete di assistenza Spazio Enel diffusa sul territorio, oltre al canale telefonico dedicato Business.', ordinamento: 10 },
   { tipo: 'GENERALE', testo: 'Un solo fornitore per luce e gas semplifica gestione, fatturazione e assistenza.', ordinamento: 11 },
-  { tipo: 'GENERALE', testo: 'Verifica se sono attive promozioni o vantaggi dedicati ai clienti Enel Business per questo periodo (non inclusi in questo calcolo).', ordinamento: 12 },
+  { tipo: 'GENERALE', testo: 'Verifica se sono attive promozioni o vantaggi dedicati ai clienti Enel SMB per questo periodo (non inclusi in questo calcolo).', ordinamento: 12 },
   { tipo: 'GENERALE', testo: 'Solidità di un operatore storico: minore rischio di disservizi o cambi di condizioni improvvisi.', ordinamento: 13 }
 ];
 

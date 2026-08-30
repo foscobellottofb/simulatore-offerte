@@ -44,6 +44,26 @@ export function ConcorrenzaClient() {
   const [analisiIA, setAnalisiIA] = useState<string | null>(null);
   const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
 
+  // Il caricamento foto/PDF (analisi AI, a pagamento) è riservato agli
+  // operatori abilitati con una password condivisa; l'inserimento manuale
+  // dei dati resta sempre disponibile a chiunque, nessuna limitazione lì.
+  const [operatorKey, setOperatorKey] = useState('');
+  const [mostraSblocco, setMostraSblocco] = useState(false);
+  const [pwOperatore, setPwOperatore] = useState('');
+
+  useEffect(() => {
+    const salvata = typeof window !== 'undefined' ? sessionStorage.getItem('operatorKey') : null;
+    if (salvata) setOperatorKey(salvata);
+  }, []);
+
+  function sbloccaOperatore() {
+    if (!pwOperatore) return;
+    sessionStorage.setItem('operatorKey', pwOperatore);
+    setOperatorKey(pwOperatore);
+    setMostraSblocco(false);
+    setPwOperatore('');
+  }
+
   useEffect(() => {
     Promise.all([
       fetch('/api/offerte').then((r) => r.json()),
@@ -103,7 +123,7 @@ export function ConcorrenzaClient() {
       try {
         const res = await fetch('/api/ocr', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-operator-key': operatorKey },
           body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
         });
 
@@ -116,6 +136,13 @@ export function ConcorrenzaClient() {
           return;
         }
 
+        if (res.status === 401) {
+          sessionStorage.removeItem('operatorKey');
+          setOperatorKey('');
+          setOcrStato('errore');
+          setOcrNote(data.error ?? 'Password operatore errata o mancante.');
+          return;
+        }
         if (!res.ok) {
           setOcrStato('errore');
           setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
@@ -256,7 +283,47 @@ export function ConcorrenzaClient() {
             <div className="font-medium text-sm mb-3 pt-3 border-t border-enel-line">Bolletta concorrente</div>
 
             <label className="label">Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)</label>
-            <input type="file" accept="image/*,.pdf" className="input mb-2" onChange={handleFoto} />
+            {operatorKey ? (
+              <>
+                <input type="file" accept="image/*,.pdf" className="input mb-2" onChange={handleFoto} />
+                <button
+                  className="text-[11px] text-enel-ink/30 hover:underline mb-2"
+                  onClick={() => {
+                    sessionStorage.removeItem('operatorKey');
+                    setOperatorKey('');
+                  }}
+                >
+                  Blocca di nuovo il caricamento file
+                </button>
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-enel-line p-3 mb-2">
+                <div className="text-xs text-enel-ink/50 mb-2">
+                  Il caricamento foto/PDF con analisi AI è riservato agli operatori abilitati. Puoi comunque
+                  compilare i campi qui sotto a mano, senza limitazioni.
+                </div>
+                {mostraSblocco ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      placeholder="Password operatore"
+                      className="input text-xs"
+                      value={pwOperatore}
+                      onChange={(e) => setPwOperatore(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && sbloccaOperatore()}
+                      autoFocus
+                    />
+                    <button className="btn-secondary text-xs whitespace-nowrap" onClick={sbloccaOperatore}>
+                      Sblocca
+                    </button>
+                  </div>
+                ) : (
+                  <button className="text-xs text-enel-navy hover:underline" onClick={() => setMostraSblocco(true)}>
+                    🔒 Sei un operatore abilitato? Sblocca il caricamento
+                  </button>
+                )}
+              </div>
+            )}
             {ocrStato === 'analisi' && <div className="text-xs text-enel-ink/50 mb-2">Analisi del documento in corso…</div>}
             {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}

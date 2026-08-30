@@ -1,4 +1,4 @@
-# Simulatore Offerte Enel Business
+# simulOTTO — Enel SMB
 
 Scaffold funzionante di un simulatore per confrontare le offerte Enel SMB (luce/gas)
 con offerte concorrenti, sostituendo il report Power BI. Costruito per essere
@@ -20,6 +20,7 @@ Questo progetto è pensato per essere messo online interamente dal browser, senz
 3. **Database**: prima di premere Deploy, vai nella scheda **Storage** del progetto Vercel → "Create Database" → Postgres. Vercel collega da solo la variabile `DATABASE_URL`.
 4. **Variabili d'ambiente**: in Project Settings → Environment Variables aggiungi:
    - `ANTHROPIC_API_KEY` — necessaria solo per la lettura automatica delle foto bolletta (senza, l'app funziona lo stesso, si inserisce tutto a mano)
+   - `OPERATOR_PASSWORD` — password condivisa che sblocca il caricamento foto/PDF bolletta su "/concorrenza" (chiamata a pagamento verso Anthropic). Senza questa variabile, il caricamento file resta bloccato per tutti e mostra un errore anche a chi prova a sbloccarlo: l'inserimento manuale dei dati resta comunque sempre disponibile a chiunque, senza password.
    - `SEED_SECRET` — inventa una password a caso (es. `enel2026xyz`), serve solo a te per popolare il database
    - `ADMIN_PASSWORD` — la password per entrare in "Dati e parametri" (`/admin`). Inventane una robusta: chiunque la conosca può modificare offerte e tariffe. `/simulatore` e `/concorrenza` restano pubblici, senza password.
 5. **Deploy**. Il comando di build crea da solo tutte le tabelle nel database (non serve alcun comando da terminale).

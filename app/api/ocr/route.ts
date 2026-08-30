@@ -59,6 +59,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Il caricamento file (chiamata a pagamento) è riservato agli operatori
+  // abilitati. Il controllo lato client è solo comodità: quello che conta è
+  // questo, lato server, altrimenti chiunque potrebbe chiamare l'endpoint
+  // direttamente bypassando l'interfaccia.
+  if (!process.env.OPERATOR_PASSWORD) {
+    return NextResponse.json(
+      { error: 'OPERATOR_PASSWORD non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
+      { status: 500 }
+    );
+  }
+  if (req.headers.get('x-operator-key') !== process.env.OPERATOR_PASSWORD) {
+    return NextResponse.json({ error: 'Password operatore errata o mancante.' }, { status: 401 });
+  }
+
   const { imageBase64, mediaType } = await req.json();
 
   if (!imageBase64) {

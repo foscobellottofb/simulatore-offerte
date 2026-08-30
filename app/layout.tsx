@@ -3,7 +3,7 @@ import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
 
 export const metadata: Metadata = {
-  title: 'Simulatore Offerte Enel Business',
+  title: 'simulOTTO — Enel SMB',
   description: 'Confronto offerte Enel SMB e simulazione bolletta vs concorrenza'
 };
 

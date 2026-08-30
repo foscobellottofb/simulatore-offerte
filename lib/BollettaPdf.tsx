@@ -314,7 +314,7 @@ export function BollettaPdf({
             <Text style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Helvetica-Bold', color: '#43A047' }}>l</Text>
           </View>
         )}
-        <Text style={[styles.logoSub, { marginTop: 4 }]}>Enel Business — Mercato libero dell'energia</Text>
+        <Text style={[styles.logoSub, { marginTop: 4 }]}>Enel SMB — Mercato libero dell'energia</Text>
         {codiceFiscalePiva && (
           <View style={styles.fiscaleBox}>
             <View>

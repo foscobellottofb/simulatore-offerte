@@ -18,8 +18,8 @@ export function Sidebar() {
       {/* Barra superiore visibile solo su mobile */}
       <div className="md:hidden flex items-center justify-between bg-enel-navy text-white px-4 py-3 sticky top-0 z-30">
         <div>
-          <div className="text-base font-semibold tracking-tight">Enel Business</div>
-          <div className="text-[11px] text-white/50">Simulatore offerte SMB</div>
+          <div className="text-base font-semibold tracking-tight">simulOTTO</div>
+          <div className="text-[11px] text-white/50">Enel SMB · Simulatore offerte</div>
         </div>
         <button
           aria-label="Apri menu"
@@ -49,8 +49,8 @@ export function Sidebar() {
           ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >
         <div className="px-5 py-6 border-b border-white/10 hidden md:block">
-          <div className="text-lg font-semibold tracking-tight">Enel Business</div>
-          <div className="text-xs text-white/50 mt-0.5">Simulatore offerte SMB</div>
+          <div className="text-lg font-semibold tracking-tight">simulOTTO</div>
+          <div className="text-xs text-white/50 mt-0.5">Enel SMB · Simulatore offerte</div>
         </div>
         <div className="md:hidden flex justify-end px-4 py-3">
           <button aria-label="Chiudi menu" onClick={() => setOpen(false)} className="p-2 text-white">
