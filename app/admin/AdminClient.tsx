@@ -358,7 +358,15 @@ export function AdminClient() {
                     </td>
                     <td className="px-4 py-2.5">{o.commodity}</td>
                     <td className="px-4 py-2.5">{o.tipoPrezzo}</td>
-                    <td className="px-4 py-2.5 text-right">{(o.prezzoFisso ?? o.cap ?? 0).toFixed(4)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {(o.prezzoFisso ?? o.cap ?? 0).toFixed(4)}
+                      {o.prezzoF2 != null && (
+                        <div className="text-xs text-enel-ink/50 font-normal">
+                          F2 {o.prezzoF2.toFixed(4)}
+                          {o.prezzoF3 != null && ` · F3 ${o.prezzoF3.toFixed(4)}`}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 text-right">{o.ccvMensile.toFixed(2)} €</td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       <button className="text-xs text-enel-green hover:underline mr-3" onClick={() => setFormAperto(o)}>

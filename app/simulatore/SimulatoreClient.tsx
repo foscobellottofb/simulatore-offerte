@@ -210,9 +210,22 @@ export function SimulatoreClient() {
                       <div className="text-xs text-enel-ink/50">{r.offerta.vendibilita}</div>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      {r.offerta.tipoPrezzo === 'VARIABILE_CAP'
-                        ? `CAP ${r.offerta.cap?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`
-                        : `${r.offerta.prezzoFisso?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`}
+                      {r.offerta.tipoPrezzo === 'VARIABILE_CAP' ? (
+                        `CAP ${r.offerta.cap?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`
+                      ) : r.offerta.prezzoF2 != null ? (
+                        <div>
+                          <div>
+                            F1 {r.offerta.prezzoFisso?.toFixed(4)} €/{r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}
+                          </div>
+                          <div className="text-xs text-enel-ink/50">
+                            F2 {r.offerta.prezzoF2.toFixed(4)}
+                            {r.offerta.oreInizioF2 != null && ` (${r.offerta.oreInizioF2}-${r.offerta.oreFineF2})`}
+                            {r.offerta.prezzoF3 != null && ` · F3 ${r.offerta.prezzoF3.toFixed(4)}`}
+                          </div>
+                        </div>
+                      ) : (
+                        `${r.offerta.prezzoFisso?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right">{euro(r.offerta.ccvMensile)}</td>
                     <td className="px-5 py-3 text-right font-semibold">
