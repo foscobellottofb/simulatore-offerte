@@ -25,6 +25,16 @@ export function ConcorrenzaClient() {
   const [totaleDichiarato, setTotaleDichiarato] = useState<number | ''>('');
   const [nomeFornitore, setNomeFornitore] = useState('');
 
+  // Segnalazione dell'offerta concorrente (per la pagina pubblica "/mercato"):
+  // gli operatori, avendo già in mano i dati veri della bolletta del cliente,
+  // sono la fonte più affidabile che abbiamo — meglio di una ricerca web.
+  const [sconto, setSconto] = useState('');
+  const [durataDal, setDurataDal] = useState('');
+  const [durataAl, setDurataAl] = useState('');
+  const [canaleSegnalazione, setCanaleSegnalazione] = useState<'WEB' | 'ALTRO'>('ALTRO');
+  const [nomeSegnalatore, setNomeSegnalatore] = useState('');
+  const [segnalazioneStato, setSegnalazioneStato] = useState<'idle' | 'invio' | 'ok' | 'errore'>('idle');
+
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
@@ -121,6 +131,37 @@ export function ConcorrenzaClient() {
     a.href = url;
     a.download = `bolletta-simulata-${migliorEnel.offerta.nome}.pdf`;
     a.click();
+  }
+
+  async function segnalaOfferta() {
+    if (!nomeFornitore || prezzoKwh === '') return;
+    setSegnalazioneStato('invio');
+    const noteParti = [
+      `Segnalata dal campo${nomeSegnalatore ? ' da ' + nomeSegnalatore : ''} il ${new Date().toLocaleDateString('it-IT')}, DA VERIFICARE.`,
+      sconto ? `Sconto/promo: ${sconto}.` : null,
+      durataDal || durataAl ? `Offerta valida dal ${durataDal || '?'} al ${durataAl || '?'}.` : null
+    ].filter(Boolean);
+    try {
+      const res = await fetch('/api/segnalazioni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fornitore: nomeFornitore,
+          nomeOfferta: `Offerta ${nomeFornitore}`,
+          commodity,
+          tipoPrezzo: tipoPrezzoConcorrente,
+          prezzoKwh: Number(prezzoKwh),
+          ccvMensile: ccv === '' ? null : Number(ccv),
+          canale: canaleSegnalazione,
+          note: noteParti.join(' '),
+          attiva: false,
+          ordinamento: 99
+        })
+      });
+      setSegnalazioneStato(res.ok ? 'ok' : 'errore');
+    } catch {
+      setSegnalazioneStato('errore');
+    }
   }
 
   return (
@@ -242,6 +283,59 @@ export function ConcorrenzaClient() {
                 />
               </div>
             </div>
+
+            <div className="font-medium text-sm mb-3 pt-3 mt-4 border-t border-enel-line">
+              Segnala questa offerta al mercato
+              <span className="block text-xs font-normal text-enel-ink/50 mt-0.5">
+                Facoltativo: invia questi dati alla pagina pubblica "Mercato dell'energia", dopo verifica di un
+                amministratore. Aiuta tutta la rete a tenere aggiornato il quadro della concorrenza.
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div className="col-span-2">
+                <label className="label">Sconto/promozione (opzionale)</label>
+                <input
+                  className="input"
+                  placeholder="es. -10% primi 12 mesi, bonus welcome…"
+                  value={sconto}
+                  onChange={(e) => setSconto(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Offerta valida dal</label>
+                <input type="date" className="input" value={durataDal} onChange={(e) => setDurataDal(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">al</label>
+                <input type="date" className="input" value={durataAl} onChange={(e) => setDurataAl(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Canale</label>
+                <select className="input" value={canaleSegnalazione} onChange={(e) => setCanaleSegnalazione(e.target.value as 'WEB' | 'ALTRO')}>
+                  <option value="ALTRO">Vista di persona / bolletta reale</option>
+                  <option value="WEB">Offerta solo web</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Il tuo nome (opzionale)</label>
+                <input className="input" value={nomeSegnalatore} onChange={(e) => setNomeSegnalatore(e.target.value)} />
+              </div>
+            </div>
+            <button
+              className="btn-secondary text-sm w-full"
+              onClick={segnalaOfferta}
+              disabled={!nomeFornitore || prezzoKwh === '' || segnalazioneStato === 'invio'}
+            >
+              {segnalazioneStato === 'invio' ? 'Invio…' : '📩 Segnala questa offerta'}
+            </button>
+            {segnalazioneStato === 'ok' && (
+              <div className="text-xs text-enel-green mt-2">
+                Grazie! Segnalazione inviata: comparirà su "Mercato dell'energia" dopo la verifica.
+              </div>
+            )}
+            {segnalazioneStato === 'errore' && (
+              <div className="text-xs text-red-600 mt-2">Invio non riuscito, riprova.</div>
+            )}
           </div>
         </div>
 
