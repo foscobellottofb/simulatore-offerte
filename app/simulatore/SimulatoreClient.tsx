@@ -26,6 +26,7 @@ export function SimulatoreClient() {
   const [nomeCliente, setNomeCliente] = useState('');
   const [pod, setPod] = useState('');
   const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
+  const [citta, setCitta] = useState('');
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export function SimulatoreClient() {
         nomeCliente,
         pod,
         indirizzoFornitura,
+        citta,
         codiceFiscalePiva
       })
     });
@@ -192,9 +194,13 @@ export function SimulatoreClient() {
             <label className="label">POD (opzionale, per il PDF)</label>
             <input className="input" value={pod} onChange={(e) => setPod(e.target.value)} placeholder="IT001E..." />
           </div>
-          <div className="sm:col-span-2">
+          <div>
             <label className="label">Indirizzo fornitura (opzionale, per il PDF)</label>
-            <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} />
+            <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} placeholder="Via Roma 12" />
+          </div>
+          <div>
+            <label className="label">Città (opzionale, per il PDF)</label>
+            <input className="input" value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="33072 Casarsa della Delizia PN" />
           </div>
           <div>
             <label className="label">Cod. Fiscale/P.IVA (opzionale)</label>

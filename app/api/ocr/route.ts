@@ -23,6 +23,8 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "fornitore": string | null,
   "nomeCliente": string | null,
   "pod": string | null,
+  "indirizzoFornitura": string | null,
+  "citta": string | null,
   "codiceFiscalePiva": string | null,
   "confidenza": "alta" | "media" | "bassa",
   "note": string | null,
@@ -41,6 +43,8 @@ Regole:
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
 - "nomeCliente": l'intestatario della bolletta (persona o ragione sociale), se presente.
 - "pod": il codice POD (elettricità, formato IT+numeri) o PDR (gas) del punto di fornitura, se presente.
+- "indirizzoFornitura": via e numero civico del punto di fornitura, se presente (separato dalla città).
+- "citta": CAP e città/comune del punto di fornitura, se presente.
 - "codiceFiscalePiva": codice fiscale o partita IVA dell'intestatario, se presente.
 - "costiExtra": voci che NON sono la normale spesa energia/rete/oneri/accisa/IVA del periodo — es.
   interessi di mora, spese di sollecito o riscossione, canoni di noleggio contatore, contributi una

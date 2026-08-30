@@ -279,6 +279,7 @@ export function BollettaPdf({
   nomeCliente,
   pod,
   indirizzoFornitura,
+  citta,
   codiceFiscalePiva
 }: {
   risultato: RisultatoCalcolo;
@@ -286,11 +287,13 @@ export function BollettaPdf({
   nomeCliente?: string;
   pod?: string;
   indirizzoFornitura?: string;
+  citta?: string;
   codiceFiscalePiva?: string;
 }) {
   const dataOggi = new Date().toLocaleDateString('it-IT');
   const consumoPeriodo = consumoNelPeriodo(input).toFixed(0);
   const etichettaCommodity = input.commodity === 'LUCE' ? 'ENERGIA ELETTRICA' : 'GAS NATURALE';
+  const indirizzoCompleto = [indirizzoFornitura, citta].filter(Boolean).join(' — ');
 
   const gruppi = [
     { label: 'Quota consumi', valore: risultato.riepilogo.quotaConsumi, gruppo: 'CONSUMI' as const },
@@ -354,7 +357,7 @@ export function BollettaPdf({
             </View>
           </View>
 
-          {(pod || indirizzoFornitura) && (
+          {(pod || indirizzoCompleto) && (
             <View style={styles.infoRow}>
               {pod && (
                 <View>
@@ -366,10 +369,10 @@ export function BollettaPdf({
                 <Text style={styles.infoLabel}>Potenza impegnata</Text>
                 <Text style={styles.infoValue}>{input.commodity === 'LUCE' ? `${input.potenzaKw} kW` : '—'}</Text>
               </View>
-              {indirizzoFornitura && (
+              {indirizzoCompleto && (
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoLabel}>Indirizzo di fornitura</Text>
-                  <Text style={styles.infoValue}>{indirizzoFornitura}</Text>
+                  <Text style={styles.infoValue}>{indirizzoCompleto}</Text>
                 </View>
               )}
             </View>

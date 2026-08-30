@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     nomeCliente?: string;
     pod?: string;
     indirizzoFornitura?: string;
+    citta?: string;
     codiceFiscalePiva?: string;
   } = await req.json();
 
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       nomeCliente: body.nomeCliente,
       pod: body.pod,
       indirizzoFornitura: body.indirizzoFornitura,
+      citta: body.citta,
       codiceFiscalePiva: body.codiceFiscalePiva
     })
   );

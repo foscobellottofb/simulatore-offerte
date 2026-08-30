@@ -19,6 +19,8 @@ export function ConcorrenzaClient() {
   const [nomeCliente, setNomeCliente] = useState('');
   const [pod, setPod] = useState('');
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
+  const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
+  const [citta, setCitta] = useState('');
 
   const [prezzoKwh, setPrezzoKwh] = useState<number | ''>('');
   const [ccv, setCcv] = useState<number | ''>('');
@@ -154,6 +156,8 @@ export function ConcorrenzaClient() {
         if (data.fornitore) setNomeFornitore(data.fornitore);
         if (data.nomeCliente) setNomeCliente(data.nomeCliente);
         if (data.pod) setPod(data.pod);
+        if (data.indirizzoFornitura) setIndirizzoFornitura(data.indirizzoFornitura);
+        if (data.citta) setCitta(data.citta);
         if (data.codiceFiscalePiva) setCodiceFiscalePiva(data.codiceFiscalePiva);
         setAnalisiIA(data.analisi ?? null);
         setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
@@ -177,7 +181,7 @@ export function ConcorrenzaClient() {
     const res = await fetch('/api/pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ risultato: migliorEnel, input, nomeCliente, pod, codiceFiscalePiva })
+      body: JSON.stringify({ risultato: migliorEnel, input, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva })
     });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -267,6 +271,14 @@ export function ConcorrenzaClient() {
               <div>
                 <label className="label">Cod. Fiscale/P.IVA (opzionale)</label>
                 <input className="input" value={codiceFiscalePiva} onChange={(e) => setCodiceFiscalePiva(e.target.value)} />
+              </div>
+              <div>
+                <label className="label">Indirizzo fornitura (opzionale, per PDF)</label>
+                <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} placeholder="Via Roma 12" />
+              </div>
+              <div>
+                <label className="label">Città (opzionale, per PDF)</label>
+                <input className="input" value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="33072 Casarsa della Delizia PN" />
               </div>
             </div>
 
