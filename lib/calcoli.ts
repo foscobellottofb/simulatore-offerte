@@ -49,11 +49,15 @@ export function filtraOfferteDisponibili(offerte: Offerta[], input: InputSimulaz
 function prezzoEnergiaUnitario(offerta: Offerta, input: InputSimulazione): number {
   if (offerta.tipoPrezzo === 'FISSO' || offerta.tipoPrezzo === 'PERSONALIZZATA') {
     const base = offerta.prezzoFisso ?? 0;
+    const quota = input.percentualeConsumoScontato ? Math.min(Math.max(input.percentualeConsumoScontato, 0), 100) / 100 : 0;
     // Offerte tipo "Ore Happy": una parte del consumo (quella nella fascia
-    // agevolata) paga il prezzo scontato, il resto il prezzo pieno. Prezzo
-    // medio pesato = base * (1 - quota_in_fascia * sconto).
-    if (offerta.scontoPercento != null && input.percentualeConsumoScontato) {
-      const quota = Math.min(Math.max(input.percentualeConsumoScontato, 0), 100) / 100;
+    // agevolata) paga un prezzo diverso, il resto il prezzo pieno.
+    if (quota > 0 && offerta.prezzoSecondario != null) {
+      // Secondo prezzo inserito direttamente in Admin: media pesata diretta.
+      return base * (1 - quota) + offerta.prezzoSecondario * quota;
+    }
+    if (quota > 0 && offerta.scontoPercento != null) {
+      // Solo la percentuale di sconto è compilata: prezzo medio pesato = base * (1 - quota * sconto).
       return base * (1 - quota * offerta.scontoPercento);
     }
     return base;
@@ -81,7 +85,10 @@ export function calcolaOfferta(
   const spesaCcv = offerta.ccvMensile * (input.giorniFattura / 30);
 
   const scontoOrarioApplicato =
-    offerta.scontoPercento != null && !!input.percentualeConsumoScontato && offerta.oreInizioAgevolazione != null && offerta.oreFineAgevolazione != null;
+    !!input.percentualeConsumoScontato &&
+    (offerta.prezzoSecondario != null || offerta.scontoPercento != null) &&
+    offerta.oreInizioAgevolazione != null &&
+    offerta.oreFineAgevolazione != null;
 
   const righeDettaglio: RigaConfronto[] = [];
   let totaleVociFisse = 0;
@@ -90,7 +97,7 @@ export function calcolaOfferta(
     {
       categoria: 'Spesa energia',
       etichetta: scontoOrarioApplicato
-        ? `Spesa per la vendita di energia elettrica (sconto ${((offerta.scontoPercento ?? 0) * 100).toFixed(1)}% ore ${offerta.oreInizioAgevolazione}-${offerta.oreFineAgevolazione} su ${input.percentualeConsumoScontato}% del consumo)`
+        ? `Spesa per la vendita di energia elettrica (prezzo ridotto ore ${offerta.oreInizioAgevolazione}-${offerta.oreFineAgevolazione} su ${input.percentualeConsumoScontato}% del consumo)`
         : 'Spesa per la vendita di energia elettrica',
       valore: spesaEnergia,
       gruppo: 'CONSUMI'
@@ -195,6 +202,7 @@ export function calcolaConcorrente(
     vendibilita: '-',
     strutturaPrezzo: 'Monoraria',
     scontoPercento: null,
+    prezzoSecondario: null,
     oreInizioAgevolazione: null,
     oreFineAgevolazione: null,
     richiedeContatore2G: false,

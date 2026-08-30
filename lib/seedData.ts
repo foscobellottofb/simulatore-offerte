@@ -121,6 +121,7 @@ export const OFFERTE_SEED: Prisma.OffertaCreateManyInput[] = [
     vendibilita: 'SINGLE / DUAL / MULTI',
     strutturaPrezzo: 'Personalizzata',
     scontoPercento: 0.0865,
+    prezzoSecondario: 0.15804,
     oreInizioAgevolazione: 12,
     oreFineAgevolazione: 15,
     scontoDalMese: 2,

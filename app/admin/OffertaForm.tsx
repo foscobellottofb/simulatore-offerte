@@ -161,6 +161,63 @@ export function OffertaForm({
             <span className="text-sm">Richiede contatore 2G</span>
           </div>
 
+          <div className="sm:col-span-2 pt-2 border-t border-enel-line">
+            <div className="text-sm font-medium mb-1">Sconto in fascia oraria (opzionale, es. "Ore Happy")</div>
+            <div className="text-xs text-enel-ink/50 mb-3">
+              Compila solo per offerte con un prezzo diverso in certe ore del giorno. Se lasci vuoto, l'offerta usa
+              sempre il prezzo pieno.
+            </div>
+          </div>
+          <div>
+            <label className="label">Ora inizio agevolazione</label>
+            <input
+              type="number"
+              min="0"
+              max="23"
+              className="input"
+              value={valori.oreInizioAgevolazione ?? ''}
+              onChange={(e) => set('oreInizioAgevolazione', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="es. 12"
+            />
+          </div>
+          <div>
+            <label className="label">Ora fine agevolazione</label>
+            <input
+              type="number"
+              min="0"
+              max="23"
+              className="input"
+              value={valori.oreFineAgevolazione ?? ''}
+              onChange={(e) => set('oreFineAgevolazione', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="es. 15"
+            />
+          </div>
+          <div>
+            <label className="label">Secondo prezzo, fascia agevolata (€/kWh)</label>
+            <input
+              type="number"
+              step="0.00001"
+              className="input"
+              value={valori.prezzoSecondario ?? ''}
+              onChange={(e) => set('prezzoSecondario', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="es. 0.15800"
+            />
+          </div>
+          <div>
+            <label className="label">oppure sconto in % sul prezzo pieno</label>
+            <input
+              type="number"
+              step="0.1"
+              className="input"
+              value={valori.scontoPercento != null ? (valori.scontoPercento * 100).toFixed(1) : ''}
+              onChange={(e) => set('scontoPercento', e.target.value === '' ? null : Number(e.target.value) / 100)}
+              placeholder="es. 8.65"
+            />
+            <div className="text-[11px] text-enel-ink/40 mt-1">
+              Se compili anche il secondo prezzo qui sopra, quello ha la priorità su questa percentuale.
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <label className="label">Note (verifiche CTE, condizioni particolari...)</label>
             <textarea className="input" rows={2} value={valori.note ?? ''} onChange={(e) => set('note', e.target.value)} />

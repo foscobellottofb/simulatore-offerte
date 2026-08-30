@@ -40,7 +40,8 @@ model Offerta {
   canalePreferenziale String? // Tablet / Cartaceo
   vendibilita         String // es. "SINGLE / DUAL / MULTI"
   strutturaPrezzo     String @default("Monoraria")
-  scontoPercento        Float? // per offerte "personalizzate" tipo Oro Happy
+  scontoPercento        Float? // sconto in % sul prezzo pieno (alternativa a prezzoSecondario), per offerte "personalizzate" tipo Ore Happy
+  prezzoSecondario      Float? // prezzo scontato diretto (€/kWh) applicato nella fascia oraria agevolata, ha priorità su scontoPercento se compilato
   oreInizioAgevolazione Int?
   oreFineAgevolazione   Int?
   scontoDalMese         Int? // da quale mese contrattuale si applica lo sconto orario
