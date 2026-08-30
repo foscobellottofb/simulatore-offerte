@@ -18,10 +18,12 @@ export interface Offerta {
   canalePreferenziale: string | null;
   vendibilita: string;
   strutturaPrezzo: string;
-  scontoPercento: number | null;
-  prezzoSecondario: number | null;
-  oreInizioAgevolazione: number | null;
-  oreFineAgevolazione: number | null;
+  prezzoF2: number | null;
+  oreInizioF2: number | null;
+  oreFineF2: number | null;
+  prezzoF3: number | null;
+  oreInizioF3: number | null;
+  oreFineF3: number | null;
   richiedeContatore2G: boolean;
   attiva: boolean;
   note: string | null;
@@ -76,10 +78,12 @@ export interface InputSimulazione {
   tipoConsumo: 'ANNUO' | 'PERIODO';
   potenzaKw: number;
   giorniFattura: number;
-  // Per offerte con sconto in una fascia oraria (es. "Ore Happy 12-15"): quanta
-  // parte del consumo del cliente ricade in quella fascia, 0-100. Il resto del
-  // consumo paga il prezzo pieno. Ignorato per le offerte senza scontoPercento.
-  percentualeConsumoScontato?: number;
+  // Per offerte con più fasce orarie (F2, eventualmente F3): quanta parte
+  // del consumo del cliente ricade in ciascuna fascia, 0-100. Il resto va
+  // in F1. Scelte manualmente da chi usa il simulatore (stima/chiesto al
+  // cliente), non calcolate: non abbiamo la lettura oraria reale.
+  percentualeConsumoF2?: number;
+  percentualeConsumoF3?: number;
 }
 
 export type GruppoVoce = 'CONSUMI' | 'FISSA_POTENZA' | 'ACCISE' | 'ALTRE';

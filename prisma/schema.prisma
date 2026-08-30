@@ -40,10 +40,16 @@ model Offerta {
   canalePreferenziale String? // Tablet / Cartaceo
   vendibilita         String // es. "SINGLE / DUAL / MULTI"
   strutturaPrezzo     String @default("Monoraria")
-  scontoPercento        Float? // sconto in % sul prezzo pieno (alternativa a prezzoSecondario), per offerte "personalizzate" tipo Ore Happy
-  prezzoSecondario      Float? // prezzo scontato diretto (€/kWh) applicato nella fascia oraria agevolata, ha priorità su scontoPercento se compilato
-  oreInizioAgevolazione Int?
-  oreFineAgevolazione   Int?
+  // Modello a fasce orarie (F1 = prezzoFisso sopra, F2/F3 opzionali): la
+  // maggior parte delle offerte ha solo F1 (un prezzo per tutte le ore).
+  // Offerte come "Ore Happy" hanno anche F2 (e potenzialmente F3), ciascuna
+  // col proprio prezzo mantenuto così come letto dalla scheda dell'offerta.
+  prezzoF2   Float?
+  oreInizioF2 Int?
+  oreFineF2   Int?
+  prezzoF3   Float?
+  oreInizioF3 Int?
+  oreFineF3   Int?
   scontoDalMese         Int? // da quale mese contrattuale si applica lo sconto orario
   richiedeContatore2G   Boolean @default(false)
   attiva                Boolean @default(true)

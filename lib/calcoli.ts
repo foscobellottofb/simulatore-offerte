@@ -46,21 +46,26 @@ export function filtraOfferteDisponibili(offerte: Offerta[], input: InputSimulaz
   return offerte.filter((o) => offerteFiltrabile(o, input));
 }
 
+/**
+ * Prezzo medio dell'energia per kWh, per offerte a fasce orarie.
+ *
+ * La maggior parte delle offerte ha un solo prezzo (F1), valido per tutte le
+ * ore: in quel caso F2/F3 sono vuoti e il prezzo è semplicemente F1.
+ *
+ * Offerte come "Ore Happy" hanno anche un prezzo F2 (e in teoria F3), diverso
+ * da F1, valido solo in certe ore del giorno. Non conosciamo la lettura oraria
+ * reale del cliente, quindi chi usa il simulatore stima manualmente che quota
+ * del consumo ricade in F2 (e in F3): il resto va in F1. Il prezzo medio è la
+ * media pesata dei prezzi di fascia, ciascuno mantenuto esattamente come
+ * inserito in Admin, senza derivarlo da percentuali di sconto.
+ */
 function prezzoEnergiaUnitario(offerta: Offerta, input: InputSimulazione): number {
   if (offerta.tipoPrezzo === 'FISSO' || offerta.tipoPrezzo === 'PERSONALIZZATA') {
-    const base = offerta.prezzoFisso ?? 0;
-    const quota = input.percentualeConsumoScontato ? Math.min(Math.max(input.percentualeConsumoScontato, 0), 100) / 100 : 0;
-    // Offerte tipo "Ore Happy": una parte del consumo (quella nella fascia
-    // agevolata) paga un prezzo diverso, il resto il prezzo pieno.
-    if (quota > 0 && offerta.prezzoSecondario != null) {
-      // Secondo prezzo inserito direttamente in Admin: media pesata diretta.
-      return base * (1 - quota) + offerta.prezzoSecondario * quota;
-    }
-    if (quota > 0 && offerta.scontoPercento != null) {
-      // Solo la percentuale di sconto è compilata: prezzo medio pesato = base * (1 - quota * sconto).
-      return base * (1 - quota * offerta.scontoPercento);
-    }
-    return base;
+    const f1 = offerta.prezzoFisso ?? 0;
+    const quotaF2 = offerta.prezzoF2 != null && input.percentualeConsumoF2 ? Math.min(Math.max(input.percentualeConsumoF2, 0), 100) / 100 : 0;
+    const quotaF3 = offerta.prezzoF3 != null && input.percentualeConsumoF3 ? Math.min(Math.max(input.percentualeConsumoF3, 0), 100) / 100 : 0;
+    const quotaF1 = Math.max(0, 1 - quotaF2 - quotaF3);
+    return f1 * quotaF1 + (offerta.prezzoF2 ?? 0) * quotaF2 + (offerta.prezzoF3 ?? 0) * quotaF3;
   }
   // VARIABILE_CAP: senza un indice PUN/PSV live usiamo il CAP come scenario
   // prudenziale (il prezzo massimo che il cliente pagherebbe).
@@ -84,11 +89,13 @@ export function calcolaOfferta(
   const spesaEnergia = prezzoUnitario * consumoFatturato;
   const spesaCcv = offerta.ccvMensile * (input.giorniFattura / 30);
 
-  const scontoOrarioApplicato =
-    !!input.percentualeConsumoScontato &&
-    (offerta.prezzoSecondario != null || offerta.scontoPercento != null) &&
-    offerta.oreInizioAgevolazione != null &&
-    offerta.oreFineAgevolazione != null;
+  const fasceAttive: string[] = [];
+  if (offerta.prezzoF2 != null && input.percentualeConsumoF2) {
+    fasceAttive.push(`F2 ore ${offerta.oreInizioF2 ?? '?'}-${offerta.oreFineF2 ?? '?'} su ${input.percentualeConsumoF2}% del consumo`);
+  }
+  if (offerta.prezzoF3 != null && input.percentualeConsumoF3) {
+    fasceAttive.push(`F3 ore ${offerta.oreInizioF3 ?? '?'}-${offerta.oreFineF3 ?? '?'} su ${input.percentualeConsumoF3}% del consumo`);
+  }
 
   const righeDettaglio: RigaConfronto[] = [];
   let totaleVociFisse = 0;
@@ -96,9 +103,10 @@ export function calcolaOfferta(
   righeDettaglio.push(
     {
       categoria: 'Spesa energia',
-      etichetta: scontoOrarioApplicato
-        ? `Spesa per la vendita di energia elettrica (prezzo ridotto ore ${offerta.oreInizioAgevolazione}-${offerta.oreFineAgevolazione} su ${input.percentualeConsumoScontato}% del consumo)`
-        : 'Spesa per la vendita di energia elettrica',
+      etichetta:
+        fasceAttive.length > 0
+          ? `Spesa per la vendita di energia elettrica (${fasceAttive.join(', ')})`
+          : 'Spesa per la vendita di energia elettrica',
       valore: spesaEnergia,
       gruppo: 'CONSUMI'
     },
@@ -201,10 +209,12 @@ export function calcolaConcorrente(
     canalePreferenziale: null,
     vendibilita: '-',
     strutturaPrezzo: 'Monoraria',
-    scontoPercento: null,
-    prezzoSecondario: null,
-    oreInizioAgevolazione: null,
-    oreFineAgevolazione: null,
+    prezzoF2: null,
+    oreInizioF2: null,
+    oreFineF2: null,
+    prezzoF3: null,
+    oreInizioF3: null,
+    oreFineF3: null,
     richiedeContatore2G: false,
     attiva: true,
     note: null

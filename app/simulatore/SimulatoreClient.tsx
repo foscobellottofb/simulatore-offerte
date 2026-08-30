@@ -14,7 +14,8 @@ export function SimulatoreClient() {
   const [consumoKwh, setConsumoKwh] = useState(397);
   const [potenzaKw, setPotenzaKw] = useState(3);
   const [giorniFattura, setGiorniFattura] = useState(60);
-  const [percentualeConsumoScontato, setPercentualeConsumoScontato] = useState(20);
+  const [percentualeConsumoF2, setPercentualeConsumoF2] = useState(20);
+  const [percentualeConsumoF3, setPercentualeConsumoF3] = useState(0);
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
@@ -39,16 +40,18 @@ export function SimulatoreClient() {
     });
   }, []);
 
-  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoScontato };
+  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2, percentualeConsumoF3 };
 
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
     return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoScontato, loading]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2, percentualeConsumoF3, loading]);
 
-  // Il campo "quota consumo in fascia agevolata" ha senso solo se almeno
-  // un'offerta disponibile (es. "Ore Happy") ha davvero uno sconto orario.
-  const haOfferteConScontoOrario = offerte.some((o) => o.commodity === commodity && o.scontoPercento != null);
+  // I campi "quota consumo in F2/F3" hanno senso solo se almeno un'offerta
+  // disponibile (es. "Ore Happy") ha davvero più fasce di prezzo.
+  const haOfferteConF2 = offerte.some((o) => o.commodity === commodity && o.prezzoF2 != null);
+  const haOfferteConF3 = offerte.some((o) => o.commodity === commodity && o.prezzoF3 != null);
+
 
   const migliore = risultati[0];
   const attiva = risultati.find((r) => r.offerta.id === selezionata) ?? migliore;
@@ -126,21 +129,34 @@ export function SimulatoreClient() {
               onChange={(e) => setGiorniFattura(Number(e.target.value))}
             />
           </div>
-          {haOfferteConScontoOrario && (
+          {haOfferteConF2 && (
             <div>
-              <label className="label">Quota consumo in fascia agevolata (%)</label>
+              <label className="label">Quota consumo stimata in F2 (%)</label>
               <input
                 type="number"
                 min="0"
                 max="100"
                 className="input"
-                value={percentualeConsumoScontato}
-                onChange={(e) => setPercentualeConsumoScontato(Number(e.target.value))}
+                value={percentualeConsumoF2}
+                onChange={(e) => setPercentualeConsumoF2(Number(e.target.value))}
               />
               <div className="text-[11px] text-enel-ink/40 mt-1">
-                Per offerte con sconto in una fascia oraria (es. "Ore Happy"): che percentuale del consumo del
-                cliente ricade in quella fascia. Il resto paga il prezzo pieno.
+                Per offerte a più fasce (es. "Ore Happy"): quanto del consumo del cliente stimi che ricada in F2 —
+                chiedilo al cliente o stimalo. Il resto va in F1.
               </div>
+            </div>
+          )}
+          {haOfferteConF3 && (
+            <div>
+              <label className="label">Quota consumo stimata in F3 (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="input"
+                value={percentualeConsumoF3}
+                onChange={(e) => setPercentualeConsumoF3(Number(e.target.value))}
+              />
             </div>
           )}
           <div>

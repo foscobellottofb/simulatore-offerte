@@ -78,7 +78,7 @@ export function ConcorrenzaClient() {
     });
   }, []);
 
-  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoScontato: 20 };
+  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2: 20, percentualeConsumoF3: 0 };
 
   const migliorEnel = useMemo(() => {
     const risultati = calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);

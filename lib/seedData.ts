@@ -120,10 +120,9 @@ export const OFFERTE_SEED: Prisma.OffertaCreateManyInput[] = [
     canalePreferenziale: 'Tablet',
     vendibilita: 'SINGLE / DUAL / MULTI',
     strutturaPrezzo: 'Personalizzata',
-    scontoPercento: 0.0865,
-    prezzoSecondario: 0.15804,
-    oreInizioAgevolazione: 12,
-    oreFineAgevolazione: 15,
+    prezzoF2: 0.15804,
+    oreInizioF2: 12,
+    oreFineF2: 15,
     scontoDalMese: 2,
     richiedeContatore2G: true,
     note: 'Sconto sulla fascia 12-15 attivo dal 2° mese, richiede contatore 2G. Verifica CTE: prezzo listino 0,16600 €/kWh (non 0,173) e prezzo agevolato 0,08300 (non 0,0865, ma sconto 50% coerente). Da confermare quale coppia di valori usare.'
