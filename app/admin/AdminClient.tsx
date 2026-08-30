@@ -21,6 +21,8 @@ export function AdminClient() {
   const [salvando, setSalvando] = useState(false);
   const [salvandoRete, setSalvandoRete] = useState(false);
   const [salvandoPun, setSalvandoPun] = useState(false);
+  const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
+  const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
   const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
@@ -37,7 +39,7 @@ export function AdminClient() {
     fetch('/api/parametri').then((r) => r.json()).then(setParametri);
     fetch('/api/fasce-rete').then((r) => r.json()).then(setFasceRete);
     fetch('/api/pun').then((r) => r.json()).then(setPun);
-    fetch('/api/concorrenti').then((r) => r.json()).then(setConcorrenti);
+    fetch('/api/concorrenti?includiInattive=1').then((r) => r.json()).then(setConcorrenti);
   }, []);
 
   function aggiornaParametro(id: string, valore: number) {
@@ -131,7 +133,39 @@ export function AdminClient() {
     setPun((prev) => [...prev.filter((p) => !(p.anno === anno && p.mese === mese)), nuovo]);
   }
 
-  function aggiornaCampoConcorrente(id: string, campo: keyof OffertaConcorrente, valore: string | number) {
+  async function sincronizzaPunDalWeb() {
+    setSincronizzandoPun(true);
+    try {
+      const res = await fetch('/api/pun/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Sincronizzazione non riuscita.');
+        return;
+      }
+      alert(data.messaggio);
+      fetch('/api/pun').then((r) => r.json()).then(setPun);
+    } finally {
+      setSincronizzandoPun(false);
+    }
+  }
+
+  async function cercaConcorrentiDalWeb() {
+    setSincronizzandoConcorrenti(true);
+    try {
+      const res = await fetch('/api/concorrenti/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Ricerca non riuscita.');
+        return;
+      }
+      alert(data.messaggio);
+      fetch('/api/concorrenti?includiInattive=1').then((r) => r.json()).then(setConcorrenti);
+    } finally {
+      setSincronizzandoConcorrenti(false);
+    }
+  }
+
+  function aggiornaCampoConcorrente(id: string, campo: keyof OffertaConcorrente, valore: string | number | boolean) {
     setConcorrenti((prev) => prev.map((c) => (c.id === id ? { ...c, [campo]: valore } : c)));
   }
 
@@ -148,7 +182,8 @@ export function AdminClient() {
         prezzoKwh: c.prezzoKwh,
         ccvMensile: c.ccvMensile,
         canale: c.canale,
-        note: c.note
+        note: c.note,
+        attiva: c.attiva
       })
     });
   }
@@ -439,10 +474,20 @@ export function AdminClient() {
               Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
               successivo), o correggi valori stimati con quelli ufficiali.
             </p>
-            <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePun}>
-              + Aggiungi mese
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPunDalWeb} disabled={sincronizzandoPun}>
+                {sincronizzandoPun ? 'Cerco…' : '🔎 Sincronizza da web'}
+              </button>
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePun}>
+                + Aggiungi mese
+              </button>
+            </div>
           </div>
+          <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
+            "Sincronizza da web" chiede a Claude di cercare il dato ufficiale sul web e aggiorna i mesi trovati
+            (consuma credito dell'account Anthropic collegato). I mesi aggiornati da fonte non certa restano
+            marcati "stima": controllali comunque prima di un uso puntuale con un cliente.
+          </p>
           {Array.from(new Set(pun.map((p) => p.anno))).sort((a, b) => b - a).map((anno) => (
             <div key={anno} className="mb-5">
               <div className="text-sm font-semibold mb-2">{anno}</div>
@@ -484,18 +529,41 @@ export function AdminClient() {
         <div className="card p-5">
           <div className="flex items-start justify-between gap-4 mb-4">
             <p className="text-xs text-enel-ink/50">
-              Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato". Nessuna fonte pubblica le
-              aggrega automaticamente: inseriscile man mano che le raccogliete. Distingui sempre le offerte "solo
-              web" (canale WEB) dalle altre (canale ALTRO), perché non sono condizioni replicabili in trattativa
-              diretta.
+              Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato" (solo quelle{' '}
+              <strong>attive</strong>). Distingui sempre le offerte "solo web" (canale WEB) dalle altre (canale
+              ALTRO), perché non sono condizioni replicabili in trattativa diretta.
             </p>
-            <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiConcorrente}>
-              + Aggiungi offerta
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={cercaConcorrentiDalWeb} disabled={sincronizzandoConcorrenti}>
+                {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web'}
+              </button>
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiConcorrente}>
+                + Aggiungi offerta
+              </button>
+            </div>
           </div>
+          <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
+            "Cerca dal web" chiede a Claude di trovare offerte pubbliche online (consuma credito Anthropic): i
+            risultati entrano <strong>non attivi</strong> e non compaiono su "/mercato" finché non li controlli e
+            spunti "Attiva".
+          </p>
           <div className="space-y-3">
             {concorrenti.map((c) => (
-              <div key={c.id} className="border border-enel-line rounded-lg p-3">
+              <div key={c.id} className={`border rounded-lg p-3 ${c.attiva ? 'border-enel-line' : 'border-enel-amber bg-enel-amber/5'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={c.attiva}
+                    onChange={(e) => {
+                      aggiornaCampoConcorrente(c.id, 'attiva', e.target.checked);
+                      setTimeout(() => salvaConcorrente(c.id), 0);
+                    }}
+                    title="Attiva (visibile su /mercato)"
+                  />
+                  <span className="text-[10px] uppercase tracking-wide text-enel-ink/40">
+                    {c.attiva ? 'Attiva — visibile su /mercato' : '⚠ Non attiva — nascosta'}
+                  </span>
+                </div>
                 <div className="grid sm:grid-cols-6 gap-2 mb-2">
                   <input
                     className="input text-xs py-1.5 px-2 sm:col-span-1"

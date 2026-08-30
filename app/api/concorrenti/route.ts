@@ -4,10 +4,14 @@ import { prisma } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 // GET pubblica: mostrata nella pagina "/mercato" per dare contesto sulle
-// offerte concorrenti. Scrittura riservata all'admin (middleware.ts).
-export async function GET() {
+// offerte concorrenti. Di default mostra solo quelle attive (verificate).
+// La pagina Admin passa ?includiInattive=1 per vedere anche le bozze non
+// ancora confermate (es. quelle trovate da "Cerca con Claude"), da attivare
+// a mano dopo averle controllate. Scrittura riservata all'admin (middleware.ts).
+export async function GET(req: NextRequest) {
+  const includiInattive = req.nextUrl.searchParams.get('includiInattive') === '1';
   const offerte = await prisma.offertaConcorrente.findMany({
-    where: { attiva: true },
+    where: includiInattive ? {} : { attiva: true },
     orderBy: [{ ordinamento: 'asc' }, { fornitore: 'asc' }]
   });
   return NextResponse.json(offerte);
