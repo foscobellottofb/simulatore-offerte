@@ -6,19 +6,19 @@ const config: Config = {
     extend: {
       colors: {
         enel: {
-          green: '#00843D',
-          greenDark: '#00612C',
-          navy: '#0F1F3D',
-          navyLight: '#1B3A66',
+          green: '#009A7A',
+          greenDark: '#00745C',
+          navy: '#006FBB',
+          navyLight: '#3E93CE',
+          magenta: '#E70066',
           ink: '#12181B',
-          paper: '#F7F8F6',
-          line: '#E1E5E2',
+          paper: '#FBFCFC',
+          line: '#E4E7E9',
           amber: '#E8A33D'
         }
       },
       fontFamily: {
-        display: ['var(--font-display)'],
-        body: ['var(--font-body)']
+        body: ['var(--font-body)', 'sans-serif']
       }
     }
   },

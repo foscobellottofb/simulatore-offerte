@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-display: 'Fraunces', serif;
-  --font-body: 'Inter', sans-serif;
-}
-
 body {
   @apply bg-enel-paper text-enel-ink;
 }
