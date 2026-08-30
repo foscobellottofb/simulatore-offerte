@@ -111,13 +111,47 @@ export default function AiutoPage() {
           <h2 className="text-lg font-semibold">Confronto concorrenza</h2>
         </div>
         <p className="text-sm text-enel-ink/70 mb-4">
-          Confronta la migliore offerta Enel contro un'offerta concorrente. Inserisci solo prezzo e CCV del
-          concorrente: il resto (rete, oneri, accisa, IVA) è uguale per tutti i fornitori, regolato da ARERA.
+          Non è solo un confronto prezzi. Mentre il Simulatore filtra le offerte Enel disponibili e mostra la
+          migliore, questa pagina è pensata per l'intero momento della trattativa col cliente: legge la bolletta
+          del concorrente da sola, e soprattutto aiuta a costruire il discorso di vendita — non solo a fare i
+          conti.
         </p>
+
+        <div className="rounded-lg border p-4 mb-5" style={{ borderColor: TEAL + '55', backgroundColor: TEAL + '0D' }}>
+          <div className="text-sm font-semibold mb-3" style={{ color: TEAL }}>
+            Le tre cose che la rendono più di un confronto prezzi
+          </div>
+          <div className="space-y-3 text-sm">
+            <div>
+              <div className="font-medium">📷 Lettura automatica della bolletta</div>
+              <div className="text-enel-ink/60">
+                Carica una foto o un PDF (anche più foto insieme, per bollette cartacee di più pagine): un'AI legge
+                fornitore, prezzo, CCV, consumo, potenza e tutti i dati del cliente, e li compila da sola nel
+                form.
+              </div>
+            </div>
+            <div>
+              <div className="font-medium">💬 Argomentario</div>
+              <div className="text-enel-ink/60">
+                Appena c'è un confronto, compaiono automaticamente i punti di forza pertinenti (se Enel vince, o gli
+                argomenti giusti se il concorrente costa meno) — frasi pronte, modificabili da Admin.
+              </div>
+            </div>
+            <div>
+              <div className="font-medium">✍️ Script di vendita generato dall'AI</div>
+              <div className="text-enel-ink/60">
+                Oltre alle frasi fisse, un pulsante genera un discorso su misura per quel cliente specifico: il
+                risparmio calcolato, il fatto che avrà un consulente dedicato che lo segue nel tempo, e la
+                solidità del marchio Enel — pronto da leggere a voce, non un elenco di punti.
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-3">
           <Campo
             titolo="Foto o PDF bolletta"
-            testo="Riservato agli operatori abilitati con password (consuma credito Anthropic). Un'AI legge fornitore, prezzo, CCV, consumo, potenza, dati cliente e segnala eventuali costi extra. Puoi caricare più foto insieme se la bolletta cartacea ha più pagine. Se non sei abilitato, compila tutto a mano — funziona identico."
+            testo="Riservato agli operatori abilitati con password (consuma credito Anthropic). Segnala anche eventuali costi extra (mora, solleciti) separandoli dal costo normale dell'energia. Se non sei abilitato, compila tutto a mano — funziona identico."
           />
           <Campo
             titolo="Totale dichiarato"
@@ -125,7 +159,7 @@ export default function AiutoPage() {
           />
           <Campo
             titolo="Riquadro Confronto"
-            testo="Appare dopo aver compilato prezzo e CCV del concorrente: mostra i due totali, il delta sul periodo, e il risparmio annuo stimato."
+            testo="Appare dopo aver compilato prezzo e CCV del concorrente: mostra i due totali, il delta sul periodo, e il risparmio annuo stimato. Da qui in giù sotto compaiono l'argomentario e il pulsante per lo script AI."
           />
         </div>
       </section>

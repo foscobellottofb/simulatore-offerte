@@ -8,16 +8,19 @@ export default function HomePage() {
         Confronta le offerte luce e gas Enel a partire da consumo e potenza del cliente, valuta un'offerta
         concorrente e genera una bolletta simulata in PDF.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Link href="/simulatore" className="card p-5 hover:border-enel-navy transition-colors">
           <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">1</div>
           <div className="text-sm font-semibold mb-1">Simulatore offerte</div>
-          <div className="text-xs text-enel-ink/60">Inserisci kW e consumo, confronta le offerte Enel disponibili</div>
+          <div className="text-xs text-enel-ink/60">Filtra le offerte Enel disponibili per kW e consumo, e mostra la migliore</div>
         </Link>
         <Link href="/concorrenza" className="card p-5 hover:border-enel-navy transition-colors">
           <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">2</div>
           <div className="text-sm font-semibold mb-1">Confronto concorrenza</div>
-          <div className="text-xs text-enel-ink/60">Prezzo kWh e CCV a mano o da foto bolletta</div>
+          <div className="text-xs text-enel-ink/60">
+            Legge la bolletta del concorrente da sola, propone argomenti di vendita e genera uno script AI per
+            parlare col cliente
+          </div>
         </Link>
         <Link href="/mercato" className="card p-5 hover:border-enel-navy transition-colors">
           <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">3</div>
@@ -28,6 +31,11 @@ export default function HomePage() {
           <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">4</div>
           <div className="text-sm font-semibold mb-1">Dati e parametri</div>
           <div className="text-xs text-enel-ink/60">Aggiorna offerte, accise, IVA e oneri</div>
+        </Link>
+        <Link href="/aiuto" className="card p-5 hover:border-enel-navy transition-colors">
+          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">5</div>
+          <div className="text-sm font-semibold mb-1">Aiuto</div>
+          <div className="text-xs text-enel-ink/60">Come funziona ogni pagina, campo per campo</div>
         </Link>
       </div>
     </div>
