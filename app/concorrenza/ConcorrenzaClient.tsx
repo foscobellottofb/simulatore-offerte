@@ -80,9 +80,20 @@ export function ConcorrenzaClient() {
     return deltaPeriodo * (365 / giorniFattura);
   }, [deltaPeriodo, giorniFattura]);
 
+  const LIMITE_FILE_MB = 4;
+
   async function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > LIMITE_FILE_MB * 1024 * 1024) {
+      setOcrStato('errore');
+      setOcrNote(
+        `File troppo grande (${(file.size / 1024 / 1024).toFixed(1)} MB, limite ${LIMITE_FILE_MB} MB). Se è un PDF con più pagine, prova a esportare/fotografare solo la pagina con i dati economici, oppure comprimi il PDF prima di caricarlo.`
+      );
+      return;
+    }
+
     setOcrStato('analisi');
     setOcrNote(null);
 
@@ -95,10 +106,19 @@ export function ConcorrenzaClient() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64, mediaType: file.type })
         });
-        const data = await res.json();
+
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          setOcrStato('errore');
+          setOcrNote(`Il server ha risposto in modo inatteso (status ${res.status}). Riprova, o usa un file più piccolo.`);
+          return;
+        }
+
         if (!res.ok) {
           setOcrStato('errore');
-          setOcrNote(data.error ?? 'Estrazione non riuscita');
+          setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
           return;
         }
         const prezzo = commodity === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
@@ -114,12 +134,13 @@ export function ConcorrenzaClient() {
             `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
           );
         }
-      } catch {
+      } catch (err) {
         setOcrStato('errore');
-        setOcrNote('Errore di rete durante l\'analisi del documento');
+        setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
       }
     };
     reader.readAsDataURL(file);
+
   }
 
   async function scaricaPdfEnel() {

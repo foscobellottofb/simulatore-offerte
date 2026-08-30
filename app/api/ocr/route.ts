@@ -4,6 +4,11 @@ import Anthropic from '@anthropic-ai/sdk';
 // Richiede la variabile d'ambiente ANTHROPIC_API_KEY (Vercel -> Project Settings -> Environment Variables).
 const anthropic = new Anthropic();
 
+// Un PDF di più pagine può richiedere più tempo di analisi. Su Vercel Hobby
+// il limite massimo è comunque fisso a 10s (questo valore viene ignorato);
+// su Pro/Enterprise consente fino a 60s, utile per bollette lunghe.
+export const maxDuration = 60;
+
 const SYSTEM_PROMPT = `Sei un analista che legge bollette di energia elettrica e gas italiane di
 fornitori concorrenti (foto o PDF, anche multipagina) per aiutare un consulente commerciale Enel a
 confrontarle correttamente con le proprie offerte.
