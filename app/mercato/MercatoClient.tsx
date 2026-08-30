@@ -227,6 +227,16 @@ function CardConcorrente({ c }: { c: OffertaConcorrente }) {
         </div>
       )}
       {c.note && <div className="text-[11px] text-enel-ink/50 mt-1.5 italic">{c.note}</div>}
+      {c.cteBase64 && (
+        <a
+          href={c.cteBase64}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block text-[11px] text-enel-navy hover:underline mt-2 border border-enel-line rounded px-2 py-1"
+        >
+          📎 Vedi documento di conferma
+        </a>
+      )}
     </div>
   );
 }
