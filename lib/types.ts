@@ -35,6 +35,28 @@ export interface ParametroDettaglio {
   ordinamento: number;
 }
 
+// Componenti di rete ARERA per fascia di potenza (BTA1..BTA6), editabili da
+// Admin → "Rete e oneri". Sostituiscono i valori prima hardcoded in
+// lib/tariffeLuce.ts.
+export interface FasciaRete {
+  id: string;
+  commodity: Commodity;
+  fascia: string;
+  etichetta: string;
+  minKw: number;
+  maxKw: number | null;
+  distribuzioneFissaAnno: number;
+  distribuzionePotenzaAnno: number;
+  distribuzioneEnergiaKwh: number;
+  asosFissaAnno: number;
+  asosPotenzaAnno: number;
+  asosEnergiaKwh: number;
+  arimFissaAnno: number;
+  arimPotenzaAnno: number;
+  arimEnergiaKwh: number;
+  ordinamento: number;
+}
+
 export type TipoArgomento = 'ENEL_VINCE' | 'CONCORRENTE_VARIABILE' | 'CONCORRENTE_FISSO' | 'GENERALE';
 
 export interface ArgomentoVendita {

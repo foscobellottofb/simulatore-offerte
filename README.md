@@ -21,6 +21,7 @@ Questo progetto è pensato per essere messo online interamente dal browser, senz
 4. **Variabili d'ambiente**: in Project Settings → Environment Variables aggiungi:
    - `ANTHROPIC_API_KEY` — necessaria solo per la lettura automatica delle foto bolletta (senza, l'app funziona lo stesso, si inserisce tutto a mano)
    - `SEED_SECRET` — inventa una password a caso (es. `enel2026xyz`), serve solo a te per popolare il database
+   - `ADMIN_PASSWORD` — la password per entrare in "Dati e parametri" (`/admin`). Inventane una robusta: chiunque la conosca può modificare offerte e tariffe. `/simulatore` e `/concorrenza` restano pubblici, senza password.
 5. **Deploy**. Il comando di build crea da solo tutte le tabelle nel database (non serve alcun comando da terminale).
 6. **Carica i dati iniziali**: apri nel browser `https://tuo-progetto.vercel.app/api/seed?key=LA_PASSWORD_CHE_HAI_SCELTO` — questa pagina carica le offerte Enel e i parametri di partenza. La richiami ogni volta che vuoi ripristinare i dati di partenza.
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Offerta, ParametroDettaglio, RisultatoCalcolo, Commodity } from '@/lib/types';
+import { Offerta, ParametroDettaglio, FasciaRete, RisultatoCalcolo, Commodity } from '@/lib/types';
 import { calcolaTutteLeOfferte } from '@/lib/calcoli';
 
 function euro(n: number) {
@@ -17,6 +17,7 @@ export function SimulatoreClient() {
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
+  const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [loading, setLoading] = useState(true);
   const [selezionata, setSelezionata] = useState<string | null>(null);
   const [nomeCliente, setNomeCliente] = useState('');
@@ -25,21 +26,24 @@ export function SimulatoreClient() {
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
 
   useEffect(() => {
-    Promise.all([fetch('/api/offerte').then((r) => r.json()), fetch('/api/parametri').then((r) => r.json())]).then(
-      ([o, p]) => {
-        setOfferte(o);
-        setParametri(p);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      fetch('/api/offerte').then((r) => r.json()),
+      fetch('/api/parametri').then((r) => r.json()),
+      fetch('/api/fasce-rete').then((r) => r.json())
+    ]).then(([o, p, f]) => {
+      setOfferte(o);
+      setParametri(p);
+      setFasceRete(f);
+      setLoading(false);
+    });
   }, []);
 
   const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura };
 
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
-    return calcolaTutteLeOfferte(offerte, input, parametri);
-  }, [offerte, parametri, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, loading]);
+    return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, loading]);
 
   const migliore = risultati[0];
   const attiva = risultati.find((r) => r.offerta.id === selezionata) ?? migliore;

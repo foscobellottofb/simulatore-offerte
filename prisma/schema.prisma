@@ -69,6 +69,30 @@ model ParametroDettaglio {
   updatedAt   DateTime @updatedAt
 }
 
+// Componenti di rete ARERA (distribuzione + oneri ASOS/ARIM), una riga per
+// fascia di potenza (BTA1..BTA6). Prima erano hardcoded in lib/tariffeLuce.ts
+// e non modificabili da interfaccia: ora sono in DB e editabili da Admin,
+// sezione "Rete e oneri (per fascia di potenza)".
+model FasciaRete {
+  id                       String    @id @default(cuid())
+  commodity                Commodity @default(LUCE)
+  fascia                   String    @unique // "BTA1".."BTA6"
+  etichetta                String    // es. "Potenza impegnata ≤ 1,5 kW"
+  minKw                    Float     // esclusivo, tranne 0 per la prima fascia
+  maxKw                    Float?    // incluso; null = nessun limite superiore
+  distribuzioneFissaAnno   Float     // €/POD/anno
+  distribuzionePotenzaAnno Float     // €/kW/anno
+  distribuzioneEnergiaKwh  Float     // €/kWh
+  asosFissaAnno            Float     // €/POD/anno
+  asosPotenzaAnno          Float     // €/kW/anno
+  asosEnergiaKwh           Float     // €/kWh
+  arimFissaAnno            Float     // €/POD/anno
+  arimPotenzaAnno          Float     // €/kW/anno
+  arimEnergiaKwh           Float     // €/kWh
+  ordinamento              Int       @default(0)
+  updatedAt                DateTime  @updatedAt
+}
+
 // Ogni simulazione salvata: dati cliente + offerta scelta + eventuale confronto concorrente.
 enum TipoArgomento {
   ENEL_VINCE

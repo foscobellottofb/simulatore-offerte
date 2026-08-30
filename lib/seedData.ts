@@ -182,18 +182,71 @@ export const OFFERTE_SEED: Prisma.OffertaCreateManyInput[] = [
 ];
 
 /**
- * Parametri di dettaglio residui, editabili da Admin. Le componenti di rete
- * (distribuzione, trasmissione, misura, oneri ASOS/ARIM) e l'accisa luce
- * sono ora calcolate automaticamente per fascia di potenza da
- * lib/tariffeLuce.ts (dati ARERA ufficiali) e non sono più qui: quei valori
- * non erano editabili a mano senza rischiare di sbagliare formula.
+ * Parametri di dettaglio editabili da Admin: accise, IVA, "altre voci" e le
+ * componenti di rete comuni a tutte le fasce di potenza (trasmissione,
+ * misura). Le componenti che invece VARIANO per fascia di potenza
+ * (distribuzione, ASOS, ARIM) sono nel modello FasciaRete qui sotto, così da
+ * poterle mostrare in Admin come una tabella per fascia (BTA1..BTA6) invece
+ * che come righe piatte senza contesto.
  */
 export const PARAMETRI_SEED: Prisma.ParametroDettaglioCreateManyInput[] = [
   { chiave: 'IVA_PERC_LUCE', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.LUCE, valore: 22, unita: '%', ordinamento: 1 },
-  { chiave: 'ALTRE_VOCI_LUCE', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.LUCE, valore: 0, unita: '€/fattura', ordinamento: 2 },
+  { chiave: 'ACCISA_LUCE_KWH', etichetta: 'Accisa energia elettrica', categoria: 'Accise e IVA', commodity: Commodity.LUCE, valore: 0.0125, unita: '€/kWh', ordinamento: 2 },
+  { chiave: 'ALTRE_VOCI_LUCE', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.LUCE, valore: 0, unita: '€/fattura', ordinamento: 3 },
+  { chiave: 'TRASMISSIONE_LUCE_KWH', etichetta: 'Tariffa trasmissione', categoria: 'Rete e oneri (comuni a tutte le fasce)', commodity: Commodity.LUCE, valore: 0.0119, unita: '€/kWh', ordinamento: 1 },
+  { chiave: 'MISURA_LUCE_ANNO', etichetta: 'Tariffa misura', categoria: 'Rete e oneri (comuni a tutte le fasce)', commodity: Commodity.LUCE, valore: 19.6826, unita: '€/POD/anno', ordinamento: 2 },
   { chiave: 'ACCISA_GAS_SMC', etichetta: 'Accisa gas', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 0, unita: '€/Smc', ordinamento: 1 },
   { chiave: 'IVA_PERC_GAS', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 22, unita: '%', ordinamento: 2 },
   { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 }
+];
+
+/**
+ * Componenti di rete ARERA per fascia di potenza BTA1..BTA6 (energia elettrica).
+ * Prima erano hardcoded in lib/tariffeLuce.ts; ora sono qui, in DB, editabili
+ * da Admin → "Rete e oneri". Fonte: foglio "Parametri simulatore" del file
+ * CTE_Enel_SMB_import_SharePoint.xlsx.
+ *
+ * ATTENZIONE: gli oneri ASOS/ARIM sono validi solo per il trimestre
+ * 01/07/2026-30/09/2026 (cambiano ogni trimestre con delibera ARERA) — vanno
+ * aggiornati da questa stessa pagina Admin ogni trimestre, senza toccare il codice.
+ */
+export const FASCE_RETE_SEED: Prisma.FasciaReteCreateManyInput[] = [
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA1', etichetta: 'Potenza impegnata ≤ 1,5 kW', minKw: 0, maxKw: 1.5, ordinamento: 1,
+    distribuzioneFissaAnno: 5.3471, distribuzionePotenzaAnno: 32.9297, distribuzioneEnergiaKwh: 0.00068,
+    asosFissaAnno: 12.9924, asosPotenzaAnno: 14.8164, asosEnergiaKwh: 0.031881,
+    arimFissaAnno: 3.0276, arimPotenzaAnno: 3.4524, arimEnergiaKwh: 0.001616
+  },
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA2', etichetta: 'Potenza > 1,5 e ≤ 3 kW', minKw: 1.5, maxKw: 3, ordinamento: 2,
+    distribuzioneFissaAnno: 5.3471, distribuzionePotenzaAnno: 31.1874, distribuzioneEnergiaKwh: 0.00068,
+    asosFissaAnno: 12.9924, asosPotenzaAnno: 14.0328, asosEnergiaKwh: 0.031881,
+    arimFissaAnno: 3.0276, arimPotenzaAnno: 3.27, arimEnergiaKwh: 0.001616
+  },
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA3', etichetta: 'Potenza > 3 e ≤ 6 kW', minKw: 3, maxKw: 6, ordinamento: 3,
+    distribuzioneFissaAnno: 5.3471, distribuzionePotenzaAnno: 34.672, distribuzioneEnergiaKwh: 0.00068,
+    asosFissaAnno: 12.9924, asosPotenzaAnno: 15.6012, asosEnergiaKwh: 0.031881,
+    arimFissaAnno: 3.0276, arimPotenzaAnno: 3.636, arimEnergiaKwh: 0.001616
+  },
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA4', etichetta: 'Potenza > 6 e ≤ 10 kW', minKw: 6, maxKw: 10, ordinamento: 4,
+    distribuzioneFissaAnno: 5.8818, distribuzionePotenzaAnno: 34.672, distribuzioneEnergiaKwh: 0.00068,
+    asosFissaAnno: 13.2336, asosPotenzaAnno: 15.6012, asosEnergiaKwh: 0.031881,
+    arimFissaAnno: 3.0828, arimPotenzaAnno: 3.636, arimEnergiaKwh: 0.001616
+  },
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA5', etichetta: 'Potenza > 10 kW', minKw: 10, maxKw: null, ordinamento: 5,
+    distribuzioneFissaAnno: 5.8818, distribuzionePotenzaAnno: 34.672, distribuzioneEnergiaKwh: 0.00068,
+    asosFissaAnno: 13.2336, asosPotenzaAnno: 15.6012, asosEnergiaKwh: 0.031881,
+    arimFissaAnno: 3.0828, arimPotenzaAnno: 3.636, arimEnergiaKwh: 0.001616
+  },
+  {
+    commodity: Commodity.LUCE, fascia: 'BTA6', etichetta: 'Potenza disponibile > 16,5 kW', minKw: 16.5, maxKw: null, ordinamento: 6,
+    distribuzioneFissaAnno: 5.3471, distribuzionePotenzaAnno: 32.9297, distribuzioneEnergiaKwh: 0.00066,
+    asosFissaAnno: 12.9924, asosPotenzaAnno: 14.8164, asosEnergiaKwh: 0.031875,
+    arimFissaAnno: 3.0276, arimPotenzaAnno: 3.4524, arimEnergiaKwh: 0.001614
+  }
 ];
 
 /**

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -15,8 +15,10 @@ export function AdminClient() {
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
+  const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [salvando, setSalvando] = useState(false);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'argomentario'>('offerte');
+  const [salvandoRete, setSalvandoRete] = useState(false);
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -30,6 +32,7 @@ export function AdminClient() {
     ricaricaOfferte();
     ricaricaArgomenti();
     fetch('/api/parametri').then((r) => r.json()).then(setParametri);
+    fetch('/api/fasce-rete').then((r) => r.json()).then(setFasceRete);
   }, []);
 
   function aggiornaParametro(id: string, valore: number) {
@@ -44,6 +47,20 @@ export function AdminClient() {
       body: JSON.stringify(parametri.map((p) => ({ id: p.id, valore: p.valore })))
     });
     setSalvando(false);
+  }
+
+  function aggiornaFascia(id: string, campo: keyof FasciaRete, valore: number) {
+    setFasceRete((prev) => prev.map((f) => (f.id === id ? { ...f, [campo]: valore } : f)));
+  }
+
+  async function salvaFasceRete() {
+    setSalvandoRete(true);
+    await fetch('/api/fasce-rete', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fasceRete)
+    });
+    setSalvandoRete(false);
   }
 
   async function disattivaOfferta(id: string) {
@@ -96,7 +113,18 @@ export function AdminClient() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">Dati e parametri</h1>
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Dati e parametri</h1>
+        <button
+          className="text-xs text-enel-ink/50 hover:text-enel-ink hover:underline whitespace-nowrap mt-1"
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/admin/login';
+          }}
+        >
+          Esci
+        </button>
+      </div>
       <p className="text-sm text-enel-ink/60 mb-6">
         Qui aggiorni le offerte Enel, le voci di dettaglio (accise, IVA, oneri) e gli argomenti di vendita usati
         nella app, senza dover toccare il codice.
@@ -108,6 +136,9 @@ export function AdminClient() {
         </button>
         <button className={tab === 'parametri' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('parametri')}>
           Parametri di dettaglio
+        </button>
+        <button className={tab === 'rete' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('rete')}>
+          Rete e oneri ({fasceRete.length})
         </button>
         <button
           className={tab === 'argomentario' ? 'btn-primary text-xs' : 'btn-secondary text-xs'}
@@ -190,11 +221,79 @@ export function AdminClient() {
             </div>
           ))}
           <div className="text-xs text-enel-ink/50 mb-4 pt-2 border-t border-enel-line">
-            Le componenti di rete (distribuzione, trasmissione, oneri ASOS/ARIM) e l'accisa luce sono calcolate
-            automaticamente per fascia di potenza dai dati ARERA e non compaiono qui.
+            Le componenti che variano per fascia di potenza (distribuzione, ASOS, ARIM) sono nella tab "Rete e oneri".
           </div>
           <button className="btn-primary text-sm" onClick={salvaParametri} disabled={salvando}>
             {salvando ? 'Salvataggio…' : 'Salva parametri'}
+          </button>
+        </div>
+      )}
+
+      {tab === 'rete' && (
+        <div className="card p-5">
+          <p className="text-xs text-enel-ink/50 mb-4">
+            Componenti ARERA di distribuzione e oneri di sistema (ASOS/ARIM), una riga per fascia di potenza. Gli
+            oneri ASOS/ARIM cambiano ogni trimestre con delibera ARERA: aggiornali qui, senza toccare il codice.
+            Trasmissione, misura e accisa (comuni a tutte le fasce) sono invece nella tab "Parametri di dettaglio".
+          </p>
+          <div className="overflow-x-auto">
+            <table className="text-xs min-w-[1100px] w-full">
+              <thead className="bg-enel-navy text-white/80 uppercase">
+                <tr>
+                  <th className="text-left px-3 py-2">Fascia</th>
+                  <th className="text-right px-3 py-2">Distr. fissa<br />€/POD/anno</th>
+                  <th className="text-right px-3 py-2">Distr. potenza<br />€/kW/anno</th>
+                  <th className="text-right px-3 py-2">Distr. energia<br />€/kWh</th>
+                  <th className="text-right px-3 py-2">ASOS fissa<br />€/POD/anno</th>
+                  <th className="text-right px-3 py-2">ASOS potenza<br />€/kW/anno</th>
+                  <th className="text-right px-3 py-2">ASOS energia<br />€/kWh</th>
+                  <th className="text-right px-3 py-2">ARIM fissa<br />€/POD/anno</th>
+                  <th className="text-right px-3 py-2">ARIM potenza<br />€/kW/anno</th>
+                  <th className="text-right px-3 py-2">ARIM energia<br />€/kWh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fasceRete.map((f) => (
+                  <tr key={f.id} className="border-t border-enel-line">
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      {f.fascia}
+                      <div className="text-[10px] text-enel-ink/40 font-normal">{f.etichetta}</div>
+                    </td>
+                    {(
+                      [
+                        'distribuzioneFissaAnno',
+                        'distribuzionePotenzaAnno',
+                        'distribuzioneEnergiaKwh',
+                        'asosFissaAnno',
+                        'asosPotenzaAnno',
+                        'asosEnergiaKwh',
+                        'arimFissaAnno',
+                        'arimPotenzaAnno',
+                        'arimEnergiaKwh'
+                      ] as const
+                    ).map((campo) => (
+                      <td key={campo} className="px-1.5 py-1.5">
+                        <input
+                          type="number"
+                          step="0.0001"
+                          className="input w-24 text-right text-xs py-1"
+                          value={f[campo] as number}
+                          onChange={(e) => aggiornaFascia(f.id, campo, Number(e.target.value))}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {fasceRete.length === 0 && (
+            <div className="text-xs text-enel-ink/40 mt-4">
+              Nessuna fascia trovata: lancia il seed (endpoint /api/seed?key=…) per caricare i valori di partenza.
+            </div>
+          )}
+          <button className="btn-primary text-sm mt-4" onClick={salvaFasceRete} disabled={salvandoRete || fasceRete.length === 0}>
+            {salvandoRete ? 'Salvataggio…' : 'Salva rete e oneri'}
           </button>
         </div>
       )}

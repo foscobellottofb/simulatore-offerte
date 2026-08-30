@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Offerta, ParametroDettaglio, Commodity, ArgomentoVendita } from '@/lib/types';
+import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
 import { Argomentario } from '@/components/Argomentario';
 
@@ -27,6 +27,7 @@ export function ConcorrenzaClient() {
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
+  const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
@@ -35,25 +36,27 @@ export function ConcorrenzaClient() {
     Promise.all([
       fetch('/api/offerte').then((r) => r.json()),
       fetch('/api/parametri').then((r) => r.json()),
-      fetch('/api/argomenti').then((r) => r.json())
-    ]).then(([o, p, a]) => {
+      fetch('/api/argomenti').then((r) => r.json()),
+      fetch('/api/fasce-rete').then((r) => r.json())
+    ]).then(([o, p, a, f]) => {
       setOfferte(o);
       setParametri(p);
       setArgomenti(a);
+      setFasceRete(f);
     });
   }, []);
 
   const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura };
 
   const migliorEnel = useMemo(() => {
-    const risultati = calcolaTutteLeOfferte(offerte, input, parametri);
+    const risultati = calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
     return risultati[0] ?? null;
-  }, [offerte, parametri, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
 
   const risultatoConcorrente = useMemo(() => {
     if (prezzoKwh === '' || ccv === '' || parametri.length === 0) return null;
-    return calcolaConcorrente(Number(prezzoKwh), Number(ccv), input, parametri);
-  }, [prezzoKwh, ccv, parametri, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+    return calcolaConcorrente(Number(prezzoKwh), Number(ccv), input, parametri, fasceRete);
+  }, [prezzoKwh, ccv, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
 
   const deltaPeriodo = useMemo(() => {
     if (!migliorEnel || !risultatoConcorrente) return null;

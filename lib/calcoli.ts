@@ -1,5 +1,5 @@
-import { Offerta, ParametroDettaglio, InputSimulazione, RisultatoCalcolo, RigaConfronto } from './types';
-import { calcolaCostiRete, ACCISA_LUCE_KWH } from './tariffeLuce';
+import { Offerta, ParametroDettaglio, InputSimulazione, RisultatoCalcolo, RigaConfronto, FasciaRete } from './types';
+import { calcolaCostiRete, ACCISA_LUCE_KWH_DEFAULT, TRASMISSIONE_KWH_DEFAULT, MISURA_ANNO_DEFAULT, FASCE_DEFAULT } from './tariffeLuce';
 
 /**
  * Motore di calcolo bolletta, verificato contro 2 bollette reali Enel Flex
@@ -62,7 +62,8 @@ function parametroValore(parametri: ParametroDettaglio[], chiave: string, fallba
 export function calcolaOfferta(
   offerta: Offerta,
   input: InputSimulazione,
-  parametri: ParametroDettaglio[]
+  parametri: ParametroDettaglio[],
+  fasceRete: FasciaRete[] = FASCE_DEFAULT
 ): RisultatoCalcolo {
   const fattoreAnno = input.giorniFattura / GIORNI_ANNO; // usato per annualizzare le quote fisse/potenza di rete
   const consumoFatturato = consumoNelPeriodo(input);
@@ -80,11 +81,15 @@ export function calcolaOfferta(
   );
 
   if (input.commodity === 'LUCE') {
-    const rete = calcolaCostiRete(input.potenzaKw);
+    const trasmissioneKwh = parametroValore(parametri, 'TRASMISSIONE_LUCE_KWH', TRASMISSIONE_KWH_DEFAULT);
+    const misuraAnno = parametroValore(parametri, 'MISURA_LUCE_ANNO', MISURA_ANNO_DEFAULT);
+    const accisaKwh = parametroValore(parametri, 'ACCISA_LUCE_KWH', ACCISA_LUCE_KWH_DEFAULT);
+
+    const rete = calcolaCostiRete(input.potenzaKw, fasceRete, trasmissioneKwh, misuraAnno);
     const speseFisseRete = rete.fissaAnno * fattoreAnno;
     const spesePotenza = rete.potenzaAnnoPerKw * input.potenzaKw * fattoreAnno;
     const speseEnergiaRete = rete.energiaKwh * consumoFatturato;
-    const accisa = ACCISA_LUCE_KWH * consumoFatturato;
+    const accisa = accisaKwh * consumoFatturato;
 
     righeDettaglio.push(
       { categoria: 'Trasporto e oneri di sistema', etichetta: `Quota fissa (fascia ${rete.fascia})`, valore: speseFisseRete, gruppo: 'FISSA_POTENZA' },
@@ -134,10 +139,11 @@ export function calcolaOfferta(
 export function calcolaTutteLeOfferte(
   offerte: Offerta[],
   input: InputSimulazione,
-  parametri: ParametroDettaglio[]
+  parametri: ParametroDettaglio[],
+  fasceRete: FasciaRete[] = FASCE_DEFAULT
 ): RisultatoCalcolo[] {
   return filtraOfferteDisponibili(offerte, input)
-    .map((o) => calcolaOfferta(o, input, parametri))
+    .map((o) => calcolaOfferta(o, input, parametri, fasceRete))
     .sort((a, b) => a.totaleBolletta - b.totaleBolletta);
 }
 
@@ -150,7 +156,8 @@ export function calcolaConcorrente(
   prezzoKwh: number,
   ccvMensile: number,
   input: InputSimulazione,
-  parametri: ParametroDettaglio[]
+  parametri: ParametroDettaglio[],
+  fasceRete: FasciaRete[] = FASCE_DEFAULT
 ): RisultatoCalcolo {
   const offertaFittizia: Offerta = {
     id: 'concorrente',
@@ -174,5 +181,5 @@ export function calcolaConcorrente(
     attiva: true,
     note: null
   };
-  return calcolaOfferta(offertaFittizia, input, parametri);
+  return calcolaOfferta(offertaFittizia, input, parametri, fasceRete);
 }
