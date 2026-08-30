@@ -41,6 +41,8 @@ export function ConcorrenzaClient() {
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [analisiIA, setAnalisiIA] = useState<string | null>(null);
+  const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -104,6 +106,8 @@ export function ConcorrenzaClient() {
         if (data.ccvMensile) setCcv(data.ccvMensile);
         if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
         if (data.fornitore) setNomeFornitore(data.fornitore);
+        setAnalisiIA(data.analisi ?? null);
+        setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
         setOcrStato('ok');
         if (data.confidenza !== 'alta' || data.note) {
           setOcrNote(
@@ -112,7 +116,7 @@ export function ConcorrenzaClient() {
         }
       } catch {
         setOcrStato('errore');
-        setOcrNote('Errore di rete durante l\'analisi della foto');
+        setOcrNote('Errore di rete durante l\'analisi del documento');
       }
     };
     reader.readAsDataURL(file);
@@ -230,11 +234,30 @@ export function ConcorrenzaClient() {
 
             <div className="font-medium text-sm mb-3 pt-3 border-t border-enel-line">Bolletta concorrente</div>
 
-            <label className="label">Foto bolletta (opzionale, precompila i campi)</label>
-            <input type="file" accept="image/*" capture="environment" className="input mb-2" onChange={handleFoto} />
-            {ocrStato === 'analisi' && <div className="text-xs text-enel-ink/50 mb-2">Analisi della foto in corso…</div>}
+            <label className="label">Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)</label>
+            <input type="file" accept="image/*,.pdf" className="input mb-2" onChange={handleFoto} />
+            {ocrStato === 'analisi' && <div className="text-xs text-enel-ink/50 mb-2">Analisi del documento in corso…</div>}
             {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
+
+            {ocrStato === 'ok' && (analisiIA || costiExtra.length > 0) && (
+              <div className="rounded-lg border border-enel-line bg-enel-paper p-3 mb-3">
+                <div className="text-xs font-semibold text-enel-navy mb-1">🔎 Analisi automatica</div>
+                {analisiIA && <p className="text-xs text-enel-ink/70 leading-relaxed mb-2">{analisiIA}</p>}
+                {costiExtra.length > 0 && (
+                  <div className="space-y-1">
+                    {costiExtra.map((c, i) => (
+                      <div key={i} className="flex justify-between items-baseline text-xs">
+                        <span className="text-enel-ink/60">
+                          {c.tipo === 'una_tantum' ? '🕐 Una tantum' : '➕ Ricorrente extra'} — {c.descrizione}
+                        </span>
+                        {c.importo != null && <span className="font-medium">{c.importo.toFixed(2)} €</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>

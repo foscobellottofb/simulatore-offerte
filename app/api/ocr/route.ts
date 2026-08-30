@@ -4,9 +4,11 @@ import Anthropic from '@anthropic-ai/sdk';
 // Richiede la variabile d'ambiente ANTHROPIC_API_KEY (Vercel -> Project Settings -> Environment Variables).
 const anthropic = new Anthropic();
 
-const SYSTEM_PROMPT = `Sei un estrattore di dati da bollette di energia elettrica e gas italiane.
-Ricevi la foto di una bolletta di un fornitore concorrente. Devi restituire
-SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
+const SYSTEM_PROMPT = `Sei un analista che legge bollette di energia elettrica e gas italiane di
+fornitori concorrenti (foto o PDF, anche multipagina) per aiutare un consulente commerciale Enel a
+confrontarle correttamente con le proprie offerte.
+
+Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 
 {
   "prezzoKwhLuce": number | null,
@@ -15,36 +17,56 @@ SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
   "totaleBolletta": number | null,
   "fornitore": string | null,
   "confidenza": "alta" | "media" | "bassa",
-  "note": string | null
+  "note": string | null,
+  "costiExtra": [
+    { "descrizione": string, "importo": number | null, "tipo": "una_tantum" | "ricorrente_extra" }
+  ],
+  "analisi": string
 }
 
 Regole:
-- "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della materia energia in €/kWh (o €/Smc per il gas), NON il totale in euro.
+- "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della SOLA materia energia in €/kWh (o €/Smc per
+  il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
+  orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo e
+  spiegalo in "note".
 - "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
-- Se un valore non è leggibile o non è presente, usa null. Non inventare numeri.
-- "note": eventuali ambiguità (es. più prezzi per fasce orarie, valori poco leggibili).`;
+- "costiExtra": voci che NON sono la normale spesa energia/rete/oneri/accisa/IVA del periodo — es.
+  interessi di mora, spese di sollecito o riscossione, canoni di noleggio contatore, contributi una
+  tantum, rate di importi arretrati, bolli. "tipo" è "una_tantum" per addebiti isolati legati a un
+  evento (mora, sollecito, riscossione), "ricorrente_extra" per costi fissi ricorrenti oltre al CCV
+  standard (es. un canone aggiuntivo mensile). NON includere qui le normali componenti di rete/oneri di
+  sistema/accisa/IVA, quelle fanno parte del costo normale dell'energia, non sono "extra". Se non ce ne
+  sono, restituisci un array vuoto.
+- "analisi": 2-4 frasi in italiano semplice, in linguaggio da consulente-a-consulente: qual è il vero
+  costo dell'energia per questo cliente, se il totale in bolletta è gonfiato da costi una tantum (in tal
+  caso specifica quanto, e che quindi il confronto con un'offerta nuova non deve includerli), e qualunque
+  altra cosa un consulente dovrebbe sapere prima di usare questi dati per un confronto. Se non trovi
+  nulla di rilevante oltre ai dati base, dillo esplicitamente ("Nessun costo extra rilevato oltre alla
+  normale struttura tariffaria.").
+- Se un valore non è leggibile o non è presente, usa null. Non inventare numeri.`;
 
 export async function POST(req: NextRequest) {
   const { imageBase64, mediaType } = await req.json();
 
   if (!imageBase64) {
-    return NextResponse.json({ error: 'Immagine mancante' }, { status: 400 });
+    return NextResponse.json({ error: 'File mancante' }, { status: 400 });
   }
+
+  const isPdf = mediaType === 'application/pdf';
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 500,
+    max_tokens: 1500,
     system: SYSTEM_PROMPT,
     messages: [
       {
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 }
-          },
-          { type: 'text', text: 'Estrai i dati da questa bolletta secondo le istruzioni.' }
+          isPdf
+            ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
+            : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
+          { type: 'text', text: 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.' }
         ]
       }
     ]
