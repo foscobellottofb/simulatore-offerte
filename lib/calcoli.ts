@@ -195,6 +195,8 @@ export function calcolaConcorrente(
     vendibilita: '-',
     strutturaPrezzo: 'Monoraria',
     scontoPercento: null,
+    oreInizioAgevolazione: null,
+    oreFineAgevolazione: null,
     richiedeContatore2G: false,
     attiva: true,
     note: null

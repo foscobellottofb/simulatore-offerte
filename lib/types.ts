@@ -19,6 +19,8 @@ export interface Offerta {
   vendibilita: string;
   strutturaPrezzo: string;
   scontoPercento: number | null;
+  oreInizioAgevolazione: number | null;
+  oreFineAgevolazione: number | null;
   richiedeContatore2G: boolean;
   attiva: boolean;
   note: string | null;
