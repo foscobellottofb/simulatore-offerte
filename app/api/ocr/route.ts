@@ -52,6 +52,13 @@ Regole:
 - Se un valore non è leggibile o non è presente, usa null. Non inventare numeri.`;
 
 export async function POST(req: NextRequest) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: 'ANTHROPIC_API_KEY non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
+      { status: 500 }
+    );
+  }
+
   const { imageBase64, mediaType } = await req.json();
 
   if (!imageBase64) {
@@ -60,22 +67,33 @@ export async function POST(req: NextRequest) {
 
   const isPdf = mediaType === 'application/pdf';
 
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          (isPdf
-            ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
-            : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } }) as any,
-          { type: 'text', text: 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.' }
-        ]
-      }
-    ]
-  });
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            (isPdf
+              ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
+              : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } }) as any,
+            { type: 'text', text: 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.' }
+          ]
+        }
+      ]
+    });
+  } catch (err: any) {
+    // Mostriamo il vero motivo (chiave non valida, credito esaurito, file
+    // non supportato, ecc.) invece di un 500 generico senza dettagli.
+    console.error('Errore chiamata Anthropic in /api/ocr:', err);
+    return NextResponse.json(
+      { error: `Errore dall'API Anthropic: ${err?.message || 'sconosciuto'} (status ${err?.status ?? 'n/d'})` },
+      { status: 502 }
+    );
+  }
 
   const textBlock = message.content.find((b) => b.type === 'text');
   const raw = textBlock && 'text' in textBlock ? textBlock.text : '{}';
