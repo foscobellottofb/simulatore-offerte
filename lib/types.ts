@@ -120,8 +120,12 @@ export interface OffertaConcorrente {
   tipoPrezzo: string; // "FISSO" | "VARIABILE"
   prezzoKwh: number | null;
   ccvMensile: number | null;
+  sconto: string | null;
+  durataDal: string | null;
+  durataAl: string | null;
   canale: string; // "WEB" | "ALTRO"
   note: string | null;
+  cteBase64: string | null;
   attiva: boolean;
   ordinamento: number;
 }

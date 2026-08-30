@@ -165,7 +165,7 @@ export function MercatoClient() {
 
             {concorrenti.length === 0 ? (
               <div className="text-xs text-enel-ink/40">
-                Nessuna offerta concorrente inserita ancora. Aggiungile da Admin → "Concorrenza".
+                Nessuna offerta concorrente inserita ancora. Usa il modulo qui sotto per segnalarne una.
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-5">
@@ -194,6 +194,9 @@ export function MercatoClient() {
               </div>
             )}
           </div>
+
+          {/* Modulo di segnalazione, aperto a chiunque: nessun login richiesto */}
+          <SegnalaOffertaForm />
         </>
       )}
     </div>
@@ -217,7 +220,158 @@ function CardConcorrente({ c }: { c: OffertaConcorrente }) {
         </span>
       </div>
       {c.ccvMensile != null && <div className="text-[11px] text-enel-ink/40 text-right">CCV {c.ccvMensile.toFixed(2)} €/mese</div>}
+      {c.sconto && <div className="text-[11px] text-enel-green mt-1">🏷 {c.sconto}</div>}
+      {(c.durataDal || c.durataAl) && (
+        <div className="text-[11px] text-enel-ink/40 mt-0.5">
+          Valida dal {c.durataDal || '?'} al {c.durataAl || '?'}
+        </div>
+      )}
       {c.note && <div className="text-[11px] text-enel-ink/50 mt-1.5 italic">{c.note}</div>}
+    </div>
+  );
+}
+
+function SegnalaOffertaForm() {
+  const [fornitore, setFornitore] = useState('');
+  const [nomeOfferta, setNomeOfferta] = useState('');
+  const [commodity, setCommodity] = useState<'LUCE' | 'GAS'>('LUCE');
+  const [tipoPrezzo, setTipoPrezzo] = useState<'FISSO' | 'VARIABILE'>('FISSO');
+  const [prezzoKwh, setPrezzoKwh] = useState<number | ''>('');
+  const [ccvMensile, setCcvMensile] = useState<number | ''>('');
+  const [sconto, setSconto] = useState('');
+  const [durataDal, setDurataDal] = useState('');
+  const [durataAl, setDurataAl] = useState('');
+  const [canale, setCanale] = useState<'WEB' | 'ALTRO'>('ALTRO');
+  const [nomeSegnalatore, setNomeSegnalatore] = useState('');
+  const [cteBase64, setCteBase64] = useState<string | null>(null);
+  const [cteNomeFile, setCteNomeFile] = useState<string | null>(null);
+  const [stato, setStato] = useState<'idle' | 'invio' | 'ok' | 'errore'>('idle');
+
+  function handleCte(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCteBase64(reader.result as string); // data URL completa, es. "data:image/jpeg;base64,...."
+      setCteNomeFile(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function invia() {
+    if (!fornitore || prezzoKwh === '') return;
+    setStato('invio');
+    try {
+      const res = await fetch('/api/segnalazioni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fornitore,
+          nomeOfferta: nomeOfferta || undefined,
+          commodity,
+          tipoPrezzo,
+          prezzoKwh: Number(prezzoKwh),
+          ccvMensile: ccvMensile === '' ? null : Number(ccvMensile),
+          sconto: sconto || null,
+          durataDal: durataDal || null,
+          durataAl: durataAl || null,
+          canale,
+          cteBase64,
+          nomeSegnalatore: nomeSegnalatore || undefined
+        })
+      });
+      if (!res.ok) {
+        setStato('errore');
+        return;
+      }
+      setStato('ok');
+      setFornitore('');
+      setNomeOfferta('');
+      setPrezzoKwh('');
+      setCcvMensile('');
+      setSconto('');
+      setDurataDal('');
+      setDurataAl('');
+      setCteBase64(null);
+      setCteNomeFile(null);
+    } catch {
+      setStato('errore');
+    }
+  }
+
+  return (
+    <div className="card p-5 mt-6">
+      <div className="text-sm font-semibold mb-1">Segnala un'offerta concorrente</div>
+      <p className="text-xs text-enel-ink/50 mb-4">
+        Aperto a chiunque, nessun accesso richiesto. Hai visto un prezzo concorrente su una bolletta reale o
+        un'offerta pubblicata? Segnalalo qui: un amministratore verifica prima che compaia sopra in questa pagina.
+        Allega una foto della bolletta o della schermata dell'offerta come conferma, se puoi.
+      </p>
+
+      <div className="grid sm:grid-cols-4 gap-3 mb-3">
+        <input className="input text-sm sm:col-span-2" placeholder="Fornitore *" value={fornitore} onChange={(e) => setFornitore(e.target.value)} />
+        <select className="input text-sm" value={commodity} onChange={(e) => setCommodity(e.target.value as 'LUCE' | 'GAS')}>
+          <option value="LUCE">Luce</option>
+          <option value="GAS">Gas</option>
+        </select>
+        <select className="input text-sm" value={tipoPrezzo} onChange={(e) => setTipoPrezzo(e.target.value as 'FISSO' | 'VARIABILE')}>
+          <option value="FISSO">Fisso</option>
+          <option value="VARIABILE">Variabile</option>
+        </select>
+        <input
+          className="input text-sm sm:col-span-2"
+          placeholder="Nome offerta (opzionale)"
+          value={nomeOfferta}
+          onChange={(e) => setNomeOfferta(e.target.value)}
+        />
+        <input
+          type="number"
+          step="0.0001"
+          className="input text-sm"
+          placeholder="Prezzo €/kWh *"
+          value={prezzoKwh}
+          onChange={(e) => setPrezzoKwh(e.target.value === '' ? '' : Number(e.target.value))}
+        />
+        <input
+          type="number"
+          step="0.01"
+          className="input text-sm"
+          placeholder="CCV €/mese"
+          value={ccvMensile}
+          onChange={(e) => setCcvMensile(e.target.value === '' ? '' : Number(e.target.value))}
+        />
+        <input
+          className="input text-sm sm:col-span-2"
+          placeholder="Sconto/promozione (es. -10% primi 12 mesi)"
+          value={sconto}
+          onChange={(e) => setSconto(e.target.value)}
+        />
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-enel-ink/50 whitespace-nowrap">Dal</label>
+          <input type="date" className="input text-sm" value={durataDal} onChange={(e) => setDurataDal(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-enel-ink/50 whitespace-nowrap">Al</label>
+          <input type="date" className="input text-sm" value={durataAl} onChange={(e) => setDurataAl(e.target.value)} />
+        </div>
+        <select className="input text-sm" value={canale} onChange={(e) => setCanale(e.target.value as 'WEB' | 'ALTRO')}>
+          <option value="ALTRO">Vista di persona / bolletta reale</option>
+          <option value="WEB">Offerta solo web</option>
+        </select>
+        <input className="input text-sm" placeholder="Il tuo nome (opzionale)" value={nomeSegnalatore} onChange={(e) => setNomeSegnalatore(e.target.value)} />
+      </div>
+
+      <div className="mb-4">
+        <label className="label">Allega CTE / foto bolletta come conferma (opzionale, consigliato)</label>
+        <input type="file" accept="image/*,.pdf" capture="environment" className="input text-sm" onChange={handleCte} />
+        {cteNomeFile && <div className="text-xs text-enel-green mt-1">✓ Allegato: {cteNomeFile}</div>}
+      </div>
+
+      <button className="btn-primary text-sm w-full sm:w-auto" onClick={invia} disabled={!fornitore || prezzoKwh === '' || stato === 'invio'}>
+        {stato === 'invio' ? 'Invio…' : '📩 Invia segnalazione'}
+      </button>
+      {stato === 'ok' && <div className="text-xs text-enel-green mt-2">Grazie! Segnalazione inviata, in attesa di verifica.</div>}
+      {stato === 'errore' && <div className="text-xs text-red-600 mt-2">Invio non riuscito, riprova.</div>}
     </div>
   );
 }

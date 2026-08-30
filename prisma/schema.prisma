@@ -167,8 +167,12 @@ model OffertaConcorrente {
   tipoPrezzo  String // "FISSO" | "VARIABILE"
   prezzoKwh   Float? // €/kWh se fisso, oppure spread/alfa se variabile
   ccvMensile  Float?
+  sconto      String? // testo libero, es. "-10% primi 12 mesi"
+  durataDal   String? // data inizio validità offerta, formato libero (es. "2026-08-01")
+  durataAl    String? // data fine validità offerta
   canale      String // "WEB" | "ALTRO"
   note        String?
+  cteBase64   String? // foto/documento di conferma caricato da chi segnala (data URL), per verifica admin
   attiva      Boolean  @default(true)
   ordinamento Int      @default(0)
   updatedAt   DateTime @updatedAt

@@ -611,6 +611,48 @@ export function AdminClient() {
                     <option value="ALTRO">Altro canale</option>
                   </select>
                 </div>
+                <div className="grid sm:grid-cols-6 gap-2 mb-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="input text-xs py-1.5 px-2"
+                    placeholder="CCV €/mese"
+                    value={c.ccvMensile ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'ccvMensile', Number(e.target.value))}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <input
+                    className="input text-xs py-1.5 px-2 sm:col-span-2"
+                    placeholder="Sconto/promo"
+                    value={c.sconto ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'sconto', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <input
+                    type="date"
+                    className="input text-xs py-1.5 px-2"
+                    value={c.durataDal ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'durataDal', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  <input
+                    type="date"
+                    className="input text-xs py-1.5 px-2"
+                    value={c.durataAl ?? ''}
+                    onChange={(e) => aggiornaCampoConcorrente(c.id, 'durataAl', e.target.value)}
+                    onBlur={() => salvaConcorrente(c.id)}
+                  />
+                  {c.cteBase64 && (
+                    <a
+                      href={c.cteBase64}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-enel-navy hover:underline self-center text-center border border-enel-line rounded-lg py-1.5"
+                    >
+                      📎 Vedi allegato
+                    </a>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <input
                     className="input text-xs py-1.5 px-2 flex-1"
