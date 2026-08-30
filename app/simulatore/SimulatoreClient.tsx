@@ -179,8 +179,12 @@ export function SimulatoreClient() {
                     <td className="px-5 py-3 text-right">{euro(r.offerta.ccvMensile)}</td>
                     <td className="px-5 py-3 text-right font-semibold">
                       {euro(r.totaleBolletta)}
-                      {r.offerta.id === migliore.offerta.id && (
+                      {r.offerta.id === migliore.offerta.id ? (
                         <span className="ml-2 text-xs text-enel-green font-medium">migliore</span>
+                      ) : (
+                        <span className="ml-2 text-xs text-enel-ink/40 font-medium">
+                          +{euro(r.totaleBolletta - migliore.totaleBolletta)}
+                        </span>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
