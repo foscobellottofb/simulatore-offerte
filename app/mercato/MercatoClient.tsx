@@ -216,7 +216,7 @@ function CardConcorrente({ c }: { c: OffertaConcorrente }) {
           {c.tipoPrezzo === 'VARIABILE' ? 'Variabile (spread)' : 'Fisso'}
         </span>
         <span className="text-sm font-semibold">
-          {c.prezzoKwh != null ? `${c.prezzoKwh.toFixed(4)} €/kWh` : '—'}
+          {c.prezzoKwh != null ? `${c.prezzoKwh.toFixed(4)} €/${c.commodity === 'GAS' ? 'Smc' : 'kWh'}` : '—'}
         </span>
       </div>
       {c.ccvMensile != null && <div className="text-[11px] text-enel-ink/40 text-right">CCV {c.ccvMensile.toFixed(2)} €/mese</div>}
@@ -328,7 +328,7 @@ function SegnalaOffertaForm() {
           type="number"
           step="0.0001"
           className="input text-sm"
-          placeholder="Prezzo €/kWh *"
+          placeholder={`Prezzo €/${commodity === 'GAS' ? 'Smc' : 'kWh'} *`}
           value={prezzoKwh}
           onChange={(e) => setPrezzoKwh(e.target.value === '' ? '' : Number(e.target.value))}
         />

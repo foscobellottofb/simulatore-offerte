@@ -169,22 +169,44 @@ export function AdminClient() {
     setConcorrenti((prev) => prev.map((c) => (c.id === id ? { ...c, [campo]: valore } : c)));
   }
 
+  function corpoPatchConcorrente(c: OffertaConcorrente) {
+    return {
+      fornitore: c.fornitore,
+      nomeOfferta: c.nomeOfferta,
+      commodity: c.commodity,
+      tipoPrezzo: c.tipoPrezzo,
+      prezzoKwh: c.prezzoKwh,
+      ccvMensile: c.ccvMensile,
+      sconto: c.sconto,
+      durataDal: c.durataDal,
+      durataAl: c.durataAl,
+      canale: c.canale,
+      note: c.note,
+      attiva: c.attiva
+    };
+  }
+
   async function salvaConcorrente(id: string) {
     const c = concorrenti.find((x) => x.id === id);
     if (!c) return;
     await fetch(`/api/concorrenti/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fornitore: c.fornitore,
-        nomeOfferta: c.nomeOfferta,
-        tipoPrezzo: c.tipoPrezzo,
-        prezzoKwh: c.prezzoKwh,
-        ccvMensile: c.ccvMensile,
-        canale: c.canale,
-        note: c.note,
-        attiva: c.attiva
-      })
+      body: JSON.stringify(corpoPatchConcorrente(c))
+    });
+  }
+
+  // Per checkbox/select: aggiorna e salva SUBITO usando la riga corrente "c"
+  // passata dal render, non lo stato React (che non si è ancora aggiornato
+  // nello stesso istante in cui viene innescato il salvataggio — altrimenti
+  // il salvataggio partiva con i valori vecchi, prima della modifica).
+  async function salvaCampoImmediato(c: OffertaConcorrente, campo: keyof OffertaConcorrente, valore: string | number | boolean) {
+    const aggiornato = { ...c, [campo]: valore } as OffertaConcorrente;
+    setConcorrenti((prev) => prev.map((x) => (x.id === c.id ? aggiornato : x)));
+    await fetch(`/api/concorrenti/${c.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpoPatchConcorrente(aggiornato))
     });
   }
 
@@ -548,20 +570,24 @@ export function AdminClient() {
             spunti "Attiva".
           </p>
           <div className="space-y-3">
-            {concorrenti.map((c) => (
-              <div key={c.id} className={`border rounded-lg p-3 ${c.attiva ? 'border-enel-line' : 'border-enel-amber bg-enel-amber/5'}`}>
+            {concorrenti.map((c) => {
+              const oggi = new Date().toISOString().slice(0, 10);
+              const scaduta = !!c.durataAl && c.durataAl < oggi;
+              return (
+              <div key={c.id} className={`border rounded-lg p-3 ${!c.attiva || scaduta ? 'border-enel-amber bg-enel-amber/5' : 'border-enel-line'}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <input
                     type="checkbox"
                     checked={c.attiva}
-                    onChange={(e) => {
-                      aggiornaCampoConcorrente(c.id, 'attiva', e.target.checked);
-                      setTimeout(() => salvaConcorrente(c.id), 0);
-                    }}
+                    onChange={(e) => salvaCampoImmediato(c, 'attiva', e.target.checked)}
                     title="Attiva (visibile su /mercato)"
                   />
                   <span className="text-[10px] uppercase tracking-wide text-enel-ink/40">
-                    {c.attiva ? 'Attiva — visibile su /mercato' : '⚠ Non attiva — nascosta'}
+                    {!c.attiva
+                      ? '⚠ Non attiva — nascosta'
+                      : scaduta
+                        ? `⏰ Scaduta il ${c.durataAl} — nascosta automaticamente`
+                        : 'Attiva — visibile su /mercato'}
                   </span>
                 </div>
                 <div className="grid sm:grid-cols-6 gap-2 mb-2">
@@ -581,11 +607,16 @@ export function AdminClient() {
                   />
                   <select
                     className="input text-xs py-1.5 px-2"
+                    value={c.commodity}
+                    onChange={(e) => salvaCampoImmediato(c, 'commodity', e.target.value)}
+                  >
+                    <option value="LUCE">Luce</option>
+                    <option value="GAS">Gas</option>
+                  </select>
+                  <select
+                    className="input text-xs py-1.5 px-2"
                     value={c.tipoPrezzo}
-                    onChange={(e) => {
-                      aggiornaCampoConcorrente(c.id, 'tipoPrezzo', e.target.value);
-                      setTimeout(() => salvaConcorrente(c.id), 0);
-                    }}
+                    onChange={(e) => salvaCampoImmediato(c, 'tipoPrezzo', e.target.value)}
                   >
                     <option value="FISSO">Fisso</option>
                     <option value="VARIABILE">Variabile</option>
@@ -594,7 +625,7 @@ export function AdminClient() {
                     type="number"
                     step="0.0001"
                     className="input text-xs py-1.5 px-2"
-                    placeholder="€/kWh"
+                    placeholder={c.commodity === 'GAS' ? '€/Smc' : '€/kWh'}
                     value={c.prezzoKwh ?? ''}
                     onChange={(e) => aggiornaCampoConcorrente(c.id, 'prezzoKwh', Number(e.target.value))}
                     onBlur={() => salvaConcorrente(c.id)}
@@ -602,10 +633,7 @@ export function AdminClient() {
                   <select
                     className="input text-xs py-1.5 px-2"
                     value={c.canale}
-                    onChange={(e) => {
-                      aggiornaCampoConcorrente(c.id, 'canale', e.target.value);
-                      setTimeout(() => salvaConcorrente(c.id), 0);
-                    }}
+                    onChange={(e) => salvaCampoImmediato(c, 'canale', e.target.value)}
                   >
                     <option value="WEB">Web</option>
                     <option value="ALTRO">Altro canale</option>
@@ -666,7 +694,8 @@ export function AdminClient() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
             {concorrenti.length === 0 && (
               <div className="text-xs text-enel-ink/40">Nessuna offerta concorrente inserita. Usa "+ Aggiungi offerta".</div>
             )}

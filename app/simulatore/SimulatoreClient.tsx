@@ -98,7 +98,7 @@ export function SimulatoreClient() {
             </select>
           </div>
           <div>
-            <label className="label">{tipoConsumo === 'PERIODO' ? `kWh nei ${giorniFattura} giorni` : 'kWh in un anno'}</label>
+            <label className="label">{tipoConsumo === 'PERIODO' ? `${commodity === 'GAS' ? 'Smc' : 'kWh'} nei ${giorniFattura} giorni` : `${commodity === 'GAS' ? 'Smc' : 'kWh'} in un anno`}</label>
             <input
               type="number"
               className="input"
@@ -173,8 +173,8 @@ export function SimulatoreClient() {
                     </td>
                     <td className="px-5 py-3 text-right">
                       {r.offerta.tipoPrezzo === 'VARIABILE_CAP'
-                        ? `CAP ${r.offerta.cap?.toFixed(4)} €/kWh`
-                        : `${r.offerta.prezzoFisso?.toFixed(4)} €/kWh`}
+                        ? `CAP ${r.offerta.cap?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`
+                        : `${r.offerta.prezzoFisso?.toFixed(4)} €/${r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}`}
                     </td>
                     <td className="px-5 py-3 text-right">{euro(r.offerta.ccvMensile)}</td>
                     <td className="px-5 py-3 text-right font-semibold">

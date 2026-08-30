@@ -200,7 +200,7 @@ export function ConcorrenzaClient() {
                 </select>
               </div>
               <div>
-                <label className="label">{tipoConsumo === 'PERIODO' ? `kWh nei ${giorniFattura} giorni` : 'kWh in un anno'}</label>
+                <label className="label">{tipoConsumo === 'PERIODO' ? `${commodity === 'GAS' ? 'Smc' : 'kWh'} nei ${giorniFattura} giorni` : `${commodity === 'GAS' ? 'Smc' : 'kWh'} in un anno`}</label>
                 <input
                   type="number"
                   className="input"
@@ -253,7 +253,7 @@ export function ConcorrenzaClient() {
                 </select>
               </div>
               <div>
-                <label className="label">Prezzo kWh (€)</label>
+                <label className="label">Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'} (€)</label>
                 <input
                   type="number"
                   step="0.0001"
