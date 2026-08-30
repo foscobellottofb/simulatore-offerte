@@ -499,6 +499,10 @@ export function BollettaPdf({
 
           <Text style={{ fontSize: 6.5, color: '#999', marginTop: 6 }}>
             Documento di simulazione: non è previsto alcun pagamento e non è presente alcun codice QR di pagamento.
+            {'\n'}Sono confermati solo il CCV e il prezzo dell'energia dell'offerta sottoscritta: le altre voci
+            (accise, IVA, oneri di rete ASOS/ARIM e componenti regolate) sono calcolate sui valori ARERA in vigore
+            al momento della simulazione e possono variare nel tempo per aggiornamento normativo, indipendentemente
+            da Enel.
           </Text>
         </View>
 

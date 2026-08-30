@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Offerta, ParametroDettaglio, FasciaRete, RisultatoCalcolo, Commodity } from '@/lib/types';
 import { calcolaTutteLeOfferte } from '@/lib/calcoli';
+import { AiutoCampo } from '@/components/AiutoCampo';
 
 function euro(n: number) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -103,7 +104,10 @@ export function SimulatoreClient() {
             </select>
           </div>
           <div>
-            <label className="label">Tipo consumo</label>
+            <label className="label">
+              Tipo consumo
+              <AiutoCampo testo='"Del periodo" = hai già i kWh del periodo fatturato (es. da una bolletta reale). "Annuo" = hai una stima del consumo annuo, e viene scalato automaticamente sui giorni fattura.' />
+            </label>
             <select
               className="input"
               value={tipoConsumo}
@@ -124,7 +128,10 @@ export function SimulatoreClient() {
           </div>
           {commodity === 'LUCE' && (
             <div>
-              <label className="label">Potenza kW</label>
+              <label className="label">
+                Potenza kW
+                <AiutoCampo testo="La potenza impegnata del cliente. Determina la fascia ARERA (BTA1-BTA6) per i costi di rete e filtra quali offerte sono disponibili." />
+              </label>
               <input
                 type="number"
                 className="input"
@@ -134,7 +141,10 @@ export function SimulatoreClient() {
             </div>
           )}
           <div>
-            <label className="label">Giorni fattura</label>
+            <label className="label">
+              Giorni fattura
+              <AiutoCampo testo="Il periodo simulato (es. 60 giorni per una bimestrale). Le quote fisse (CCV, quota fissa/potenza di rete) sono annualizzate e poi scalate su questo numero di giorni." />
+            </label>
             <input
               type="number"
               className="input"

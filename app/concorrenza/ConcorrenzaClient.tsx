@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
 import { Argomentario } from '@/components/Argomentario';
+import { AiutoCampo } from '@/components/AiutoCampo';
 
 function euro(n: number) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -151,6 +152,9 @@ export function ConcorrenzaClient() {
         if (data.ccvMensile) setCcv(data.ccvMensile);
         if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
         if (data.fornitore) setNomeFornitore(data.fornitore);
+        if (data.nomeCliente) setNomeCliente(data.nomeCliente);
+        if (data.pod) setPod(data.pod);
+        if (data.codiceFiscalePiva) setCodiceFiscalePiva(data.codiceFiscalePiva);
         setAnalisiIA(data.analisi ?? null);
         setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
         setOcrStato('ok');
@@ -204,7 +208,10 @@ export function ConcorrenzaClient() {
                 </select>
               </div>
               <div>
-                <label className="label">Giorni fattura</label>
+                <label className="label">
+                  Giorni fattura
+                  <AiutoCampo testo="Il periodo simulato. Le quote fisse (CCV, quota fissa/potenza di rete) sono annualizzate e poi scalate su questo numero di giorni, sia per l'offerta Enel che per il concorrente." />
+                </label>
                 <input
                   type="number"
                   className="input"
@@ -213,7 +220,10 @@ export function ConcorrenzaClient() {
                 />
               </div>
               <div>
-                <label className="label">Tipo consumo</label>
+                <label className="label">
+                  Tipo consumo
+                  <AiutoCampo testo='"Del periodo" = hai già i kWh del periodo fatturato. "Annuo" = hai una stima del consumo annuo, scalata automaticamente sui giorni fattura.' />
+                </label>
                 <select
                   className="input"
                   value={tipoConsumo}
@@ -234,7 +244,10 @@ export function ConcorrenzaClient() {
               </div>
               {commodity === 'LUCE' && (
                 <div>
-                  <label className="label">Potenza kW</label>
+                  <label className="label">
+                    Potenza kW
+                    <AiutoCampo testo="La potenza impegnata del cliente. Determina la fascia ARERA (BTA1-BTA6) usata per calcolare i costi di rete." />
+                  </label>
                   <input
                     type="number"
                     className="input"
@@ -361,7 +374,10 @@ export function ConcorrenzaClient() {
                 />
               </div>
               <div className="col-span-2">
-                <label className="label">Totale dichiarato (per verifica)</label>
+                <label className="label">
+                  Totale dichiarato (per verifica)
+                  <AiutoCampo testo="Se il cliente ti ha detto il totale della sua bolletta, inseriscilo qui: il sistema calcola lo scarto rispetto al totale ricostruito da prezzo/CCV, utile per verificare la coerenza dei dati raccolti." />
+                </label>
                 <input
                   type="number"
                   step="0.01"

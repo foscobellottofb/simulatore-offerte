@@ -21,6 +21,9 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "ccvMensile": number | null,
   "totaleBolletta": number | null,
   "fornitore": string | null,
+  "nomeCliente": string | null,
+  "pod": string | null,
+  "codiceFiscalePiva": string | null,
   "confidenza": "alta" | "media" | "bassa",
   "note": string | null,
   "costiExtra": [
@@ -36,6 +39,9 @@ Regole:
   spiegalo in "note".
 - "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
+- "nomeCliente": l'intestatario della bolletta (persona o ragione sociale), se presente.
+- "pod": il codice POD (elettricità, formato IT+numeri) o PDR (gas) del punto di fornitura, se presente.
+- "codiceFiscalePiva": codice fiscale o partita IVA dell'intestatario, se presente.
 - "costiExtra": voci che NON sono la normale spesa energia/rete/oneri/accisa/IVA del periodo — es.
   interessi di mora, spese di sollecito o riscossione, canoni di noleggio contatore, contributi una
   tantum, rate di importi arretrati, bolli. "tipo" è "una_tantum" per addebiti isolati legati a un
@@ -49,7 +55,7 @@ Regole:
   altra cosa un consulente dovrebbe sapere prima di usare questi dati per un confronto. Se non trovi
   nulla di rilevante oltre ai dati base, dillo esplicitamente ("Nessun costo extra rilevato oltre alla
   normale struttura tariffaria.").
-- Se un valore non è leggibile o non è presente, usa null. Non inventare numeri.`;
+- Se un valore non è leggibile o non è presente, usa null. Non inventare numeri né dati anagrafici.`;
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
