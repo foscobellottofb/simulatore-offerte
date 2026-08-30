@@ -13,9 +13,9 @@ import { COOKIE_NAME, tokenValido } from '@/lib/auth';
 
 const PREFIX_SCRITTURA_PROTETTA = ['/api/offerte', '/api/parametri', '/api/fasce-rete', '/api/argomenti'];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const autenticato = tokenValido(req.cookies.get(COOKIE_NAME)?.value);
+  const autenticato = await tokenValido(req.cookies.get(COOKIE_NAME)?.value);
 
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
     if (!autenticato) {
