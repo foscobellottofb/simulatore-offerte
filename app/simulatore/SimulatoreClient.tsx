@@ -11,9 +11,9 @@ function euro(n: number) {
 export function SimulatoreClient() {
   const [commodity, setCommodity] = useState<Commodity>('LUCE');
   const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>('PERIODO');
-  const [consumoKwh, setConsumoKwh] = useState(397);
-  const [potenzaKw, setPotenzaKw] = useState(3);
-  const [giorniFattura, setGiorniFattura] = useState(60);
+  const [consumoKwh, setConsumoKwh] = useState<number | ''>(397);
+  const [potenzaKw, setPotenzaKw] = useState<number | ''>(3);
+  const [giorniFattura, setGiorniFattura] = useState<number | ''>(60);
   const [percentualeConsumoF2, setPercentualeConsumoF2] = useState(20);
   const [percentualeConsumoF3, setPercentualeConsumoF3] = useState(0);
 
@@ -40,7 +40,15 @@ export function SimulatoreClient() {
     });
   }, []);
 
-  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2, percentualeConsumoF3 };
+  const input = {
+    commodity,
+    consumoKwh: consumoKwh === '' ? 0 : consumoKwh,
+    tipoConsumo,
+    potenzaKw: potenzaKw === '' ? 0 : potenzaKw,
+    giorniFattura: giorniFattura === '' ? 0 : giorniFattura,
+    percentualeConsumoF2,
+    percentualeConsumoF3
+  };
 
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
@@ -111,13 +119,18 @@ export function SimulatoreClient() {
               type="number"
               className="input"
               value={consumoKwh}
-              onChange={(e) => setConsumoKwh(Number(e.target.value))}
+              onChange={(e) => setConsumoKwh(e.target.value === '' ? '' : Number(e.target.value))}
             />
           </div>
           {commodity === 'LUCE' && (
             <div>
               <label className="label">Potenza kW</label>
-              <input type="number" className="input" value={potenzaKw} onChange={(e) => setPotenzaKw(Number(e.target.value))} />
+              <input
+                type="number"
+                className="input"
+                value={potenzaKw}
+                onChange={(e) => setPotenzaKw(e.target.value === '' ? '' : Number(e.target.value))}
+              />
             </div>
           )}
           <div>
@@ -126,7 +139,7 @@ export function SimulatoreClient() {
               type="number"
               className="input"
               value={giorniFattura}
-              onChange={(e) => setGiorniFattura(Number(e.target.value))}
+              onChange={(e) => setGiorniFattura(e.target.value === '' ? '' : Number(e.target.value))}
             />
           </div>
           {haOfferteConF2 && (

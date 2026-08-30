@@ -8,7 +8,8 @@ const NAV = [
   { href: '/simulatore', label: 'Simulatore offerte', hint: 'kW, consumo → confronto' },
   { href: '/concorrenza', label: 'Confronto concorrenza', hint: 'prezzo, CCV, foto bolletta' },
   { href: '/mercato', label: 'Mercato dell\'energia', hint: 'PUN, storico, concorrenza' },
-  { href: '/admin', label: 'Dati e parametri', hint: 'offerte e voci di dettaglio' }
+  { href: '/admin', label: 'Dati e parametri', hint: 'offerte e voci di dettaglio' },
+  { href: '/aiuto', label: 'Aiuto', hint: 'come funziona ogni pagina' }
 ];
 
 // Piccolo blocco logo "8": stessa idea dell'avatar del progetto (due anelli),
