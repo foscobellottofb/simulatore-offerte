@@ -154,6 +154,12 @@ export function ConcorrenzaClient() {
         if (data.ccvMensile) setCcv(data.ccvMensile);
         if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
         if (data.fornitore) setNomeFornitore(data.fornitore);
+        if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
+        if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
+        if (data.giorniFattura) {
+          setGiorniFattura(data.giorniFattura);
+          setTipoConsumo('PERIODO');
+        }
         if (data.nomeCliente) setNomeCliente(data.nomeCliente);
         if (data.pod) setPod(data.pod);
         if (data.indirizzoFornitura) setIndirizzoFornitura(data.indirizzoFornitura);

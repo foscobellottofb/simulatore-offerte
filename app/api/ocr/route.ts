@@ -21,6 +21,9 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "ccvMensile": number | null,
   "totaleBolletta": number | null,
   "fornitore": string | null,
+  "consumoKwh": number | null,
+  "potenzaKw": number | null,
+  "giorniFattura": number | null,
   "nomeCliente": string | null,
   "pod": string | null,
   "indirizzoFornitura": string | null,
@@ -41,6 +44,14 @@ Regole:
   spiegalo in "note".
 - "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
+- "consumoKwh": il consumo del periodo fatturato in kWh (elettricità) o Smc (gas) — quello effettivamente
+  fatturato in questa bolletta, non un consumo annuo stimato. Se ci sono più fasce (F1/F2/F3), usa il
+  totale complessivo del periodo.
+- "potenzaKw": la potenza impegnata/disponibile del punto di fornitura in kW, solo per elettricità
+  (spesso indicata come "Potenza impegnata" o "Potenza disponibile"). Null per il gas.
+- "giorniFattura": il numero di giorni del periodo fatturato, se calcolabile dalle date di inizio/fine
+  periodo indicate in bolletta (es. dal 01/06 al 31/07 = 61 giorni). Se non è chiaro, usa null piuttosto
+  che stimarlo.
 - "nomeCliente": l'intestatario della bolletta (persona o ragione sociale), se presente.
 - "pod": il codice POD (elettricità, formato IT+numeri) o PDR (gas) del punto di fornitura, se presente.
 - "indirizzoFornitura": via e numero civico del punto di fornitura, se presente (separato dalla città).
