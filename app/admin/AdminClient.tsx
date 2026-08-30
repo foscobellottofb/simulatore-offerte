@@ -350,7 +350,11 @@ export function AdminClient() {
                   <tr key={o.id} className="border-t border-enel-line">
                     <td className="px-4 py-2.5 font-medium">
                       {o.nome}
-                      {o.note && <div className="text-xs text-enel-amber font-normal mt-0.5">⚠ nota</div>}
+                      {o.note && (
+                        <div className="text-xs text-enel-amber font-normal mt-0.5 max-w-[220px]" title={o.note}>
+                          ⚠ {o.note}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">{o.commodity}</td>
                     <td className="px-4 py-2.5">{o.tipoPrezzo}</td>

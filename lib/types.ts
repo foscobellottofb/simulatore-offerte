@@ -73,6 +73,10 @@ export interface InputSimulazione {
   tipoConsumo: 'ANNUO' | 'PERIODO';
   potenzaKw: number;
   giorniFattura: number;
+  // Per offerte con sconto in una fascia oraria (es. "Ore Happy 12-15"): quanta
+  // parte del consumo del cliente ricade in quella fascia, 0-100. Il resto del
+  // consumo paga il prezzo pieno. Ignorato per le offerte senza scontoPercento.
+  percentualeConsumoScontato?: number;
 }
 
 export type GruppoVoce = 'CONSUMI' | 'FISSA_POTENZA' | 'ACCISE' | 'ALTRE';

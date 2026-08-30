@@ -14,6 +14,7 @@ export function SimulatoreClient() {
   const [consumoKwh, setConsumoKwh] = useState(397);
   const [potenzaKw, setPotenzaKw] = useState(3);
   const [giorniFattura, setGiorniFattura] = useState(60);
+  const [percentualeConsumoScontato, setPercentualeConsumoScontato] = useState(20);
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
@@ -38,12 +39,16 @@ export function SimulatoreClient() {
     });
   }, []);
 
-  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura };
+  const input = { commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoScontato };
 
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
     return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, loading]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoScontato, loading]);
+
+  // Il campo "quota consumo in fascia agevolata" ha senso solo se almeno
+  // un'offerta disponibile (es. "Ore Happy") ha davvero uno sconto orario.
+  const haOfferteConScontoOrario = offerte.some((o) => o.commodity === commodity && o.scontoPercento != null);
 
   const migliore = risultati[0];
   const attiva = risultati.find((r) => r.offerta.id === selezionata) ?? migliore;
@@ -121,6 +126,23 @@ export function SimulatoreClient() {
               onChange={(e) => setGiorniFattura(Number(e.target.value))}
             />
           </div>
+          {haOfferteConScontoOrario && (
+            <div>
+              <label className="label">Quota consumo in fascia agevolata (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className="input"
+                value={percentualeConsumoScontato}
+                onChange={(e) => setPercentualeConsumoScontato(Number(e.target.value))}
+              />
+              <div className="text-[11px] text-enel-ink/40 mt-1">
+                Per offerte con sconto in una fascia oraria (es. "Ore Happy"): che percentuale del consumo del
+                cliente ricade in quella fascia. Il resto paga il prezzo pieno.
+              </div>
+            </div>
+          )}
           <div>
             <label className="label">Nome cliente (opzionale)</label>
             <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />

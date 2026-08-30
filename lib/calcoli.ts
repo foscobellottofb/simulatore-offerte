@@ -46,9 +46,17 @@ export function filtraOfferteDisponibili(offerte: Offerta[], input: InputSimulaz
   return offerte.filter((o) => offerteFiltrabile(o, input));
 }
 
-function prezzoEnergiaUnitario(offerta: Offerta): number {
+function prezzoEnergiaUnitario(offerta: Offerta, input: InputSimulazione): number {
   if (offerta.tipoPrezzo === 'FISSO' || offerta.tipoPrezzo === 'PERSONALIZZATA') {
-    return offerta.prezzoFisso ?? 0;
+    const base = offerta.prezzoFisso ?? 0;
+    // Offerte tipo "Ore Happy": una parte del consumo (quella nella fascia
+    // agevolata) paga il prezzo scontato, il resto il prezzo pieno. Prezzo
+    // medio pesato = base * (1 - quota_in_fascia * sconto).
+    if (offerta.scontoPercento != null && input.percentualeConsumoScontato) {
+      const quota = Math.min(Math.max(input.percentualeConsumoScontato, 0), 100) / 100;
+      return base * (1 - quota * offerta.scontoPercento);
+    }
+    return base;
   }
   // VARIABILE_CAP: senza un indice PUN/PSV live usiamo il CAP come scenario
   // prudenziale (il prezzo massimo che il cliente pagherebbe).
@@ -68,15 +76,25 @@ export function calcolaOfferta(
   const fattoreAnno = input.giorniFattura / GIORNI_ANNO; // usato per annualizzare le quote fisse/potenza di rete
   const consumoFatturato = consumoNelPeriodo(input);
 
-  const prezzoUnitario = prezzoEnergiaUnitario(offerta);
+  const prezzoUnitario = prezzoEnergiaUnitario(offerta, input);
   const spesaEnergia = prezzoUnitario * consumoFatturato;
   const spesaCcv = offerta.ccvMensile * (input.giorniFattura / 30);
+
+  const scontoOrarioApplicato =
+    offerta.scontoPercento != null && !!input.percentualeConsumoScontato && offerta.oreInizioAgevolazione != null && offerta.oreFineAgevolazione != null;
 
   const righeDettaglio: RigaConfronto[] = [];
   let totaleVociFisse = 0;
 
   righeDettaglio.push(
-    { categoria: 'Spesa energia', etichetta: 'Spesa per la vendita di energia elettrica', valore: spesaEnergia, gruppo: 'CONSUMI' },
+    {
+      categoria: 'Spesa energia',
+      etichetta: scontoOrarioApplicato
+        ? `Spesa per la vendita di energia elettrica (sconto ${((offerta.scontoPercento ?? 0) * 100).toFixed(1)}% ore ${offerta.oreInizioAgevolazione}-${offerta.oreFineAgevolazione} su ${input.percentualeConsumoScontato}% del consumo)`
+        : 'Spesa per la vendita di energia elettrica',
+      valore: spesaEnergia,
+      gruppo: 'CONSUMI'
+    },
     { categoria: 'Quota fissa', etichetta: 'Corrispettivo di vendita (CCV)', valore: spesaCcv, gruppo: 'FISSA_POTENZA' }
   );
 
