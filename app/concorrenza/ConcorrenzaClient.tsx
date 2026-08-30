@@ -21,6 +21,9 @@ export function ConcorrenzaClient() {
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
   const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
   const [citta, setCitta] = useState('');
+  const [nomeConsulente, setNomeConsulente] = useState('');
+  const [scriptVendita, setScriptVendita] = useState<string | null>(null);
+  const [scriptStato, setScriptStato] = useState<'idle' | 'genera' | 'errore'>('idle');
 
   const [prezzoKwh, setPrezzoKwh] = useState<number | ''>('');
   const [ccv, setCcv] = useState<number | ''>('');
@@ -219,6 +222,39 @@ export function ConcorrenzaClient() {
     a.href = url;
     a.download = `bolletta-simulata-${migliorEnel.offerta.nome}.pdf`;
     a.click();
+  }
+
+  async function generaScriptVendita() {
+    if (!migliorEnel || !risultatoConcorrente) return;
+    setScriptStato('genera');
+    setScriptVendita(null);
+    try {
+      const res = await fetch('/api/script-vendita', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nomeCliente,
+          commodity,
+          offertaNome: migliorEnel.offerta.nome,
+          fornitoreConcorrente: nomeFornitore,
+          totaleEnel: migliorEnel.totaleBolletta,
+          totaleConcorrente: risultatoConcorrente.totaleBolletta,
+          risparmioAnnuo,
+          nomeConsulente
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setScriptStato('errore');
+        setScriptVendita(data.error ?? 'Generazione non riuscita, riprova.');
+        return;
+      }
+      setScriptVendita(data.script);
+      setScriptStato('idle');
+    } catch {
+      setScriptStato('errore');
+      setScriptVendita('Errore di rete, riprova.');
+    }
   }
 
   return (
@@ -504,6 +540,37 @@ export function ConcorrenzaClient() {
               enelVince={migliorEnel.totaleBolletta <= risultatoConcorrente.totaleBolletta}
               tipoPrezzoConcorrente={tipoPrezzoConcorrente}
             />
+          )}
+
+          {migliorEnel && risultatoConcorrente && (
+            <div className="card p-4">
+              <div className="text-sm font-semibold mb-1">✍️ Script di vendita (AI)</div>
+              <p className="text-xs text-enel-ink/50 mb-3">
+                Genera un discorso pronto da leggere al cliente: mette in evidenza il risparmio, il fatto che da
+                oggi ha un consulente dedicato che segue le sue forniture nel tempo, e la solidità del marchio
+                Enel. Consuma credito Anthropic (chiamata breve, pochi centesimi).
+              </p>
+              <div className="flex gap-2 mb-3">
+                <input
+                  className="input text-sm flex-1"
+                  placeholder="Il tuo nome (per firmare lo script, opzionale)"
+                  value={nomeConsulente}
+                  onChange={(e) => setNomeConsulente(e.target.value)}
+                />
+                <button className="btn-secondary text-sm whitespace-nowrap" onClick={generaScriptVendita} disabled={scriptStato === 'genera'}>
+                  {scriptStato === 'genera' ? 'Genero…' : 'Genera script'}
+                </button>
+              </div>
+              {scriptVendita && (
+                <div
+                  className={`rounded-lg p-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                    scriptStato === 'errore' ? 'bg-red-50 text-red-700' : 'bg-enel-paper text-enel-ink/80'
+                  }`}
+                >
+                  {scriptVendita}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

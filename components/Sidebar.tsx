@@ -34,13 +34,13 @@ export function Sidebar() {
       <div className="md:hidden sticky top-0 z-30">
         <div className="h-1.5 bg-enel-navy" />
         <div className="flex items-center justify-between bg-white border-b border-enel-line px-4 py-3">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
             <LogoMark />
             <div>
               <div className="text-base font-semibold tracking-tight text-enel-ink">simulOTTO</div>
               <div className="text-[11px] text-enel-ink/40">Enel SMB · Simulatore offerte</div>
             </div>
-          </div>
+          </Link>
           <button aria-label="Apri menu" onClick={() => setOpen(true)} className="p-2 -mr-2 text-enel-ink">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6" />
@@ -61,12 +61,14 @@ export function Sidebar() {
           ${open ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >
         <div className="h-1.5 bg-enel-navy hidden md:block" />
-        <div className="px-5 py-5 border-b border-enel-line hidden md:flex items-center gap-2.5">
-          <LogoMark />
-          <div>
-            <div className="text-base font-semibold tracking-tight text-enel-ink">simulOTTO</div>
-            <div className="text-xs text-enel-ink/40 mt-0.5">Enel SMB · Simulatore offerte</div>
-          </div>
+        <div className="px-5 py-5 border-b border-enel-line hidden md:block">
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <LogoMark />
+            <div>
+              <div className="text-base font-semibold tracking-tight text-enel-ink">simulOTTO</div>
+              <div className="text-xs text-enel-ink/40 mt-0.5">Enel SMB · Simulatore offerte</div>
+            </div>
+          </Link>
         </div>
         <div className="md:hidden flex justify-end px-4 py-3">
           <button aria-label="Chiudi menu" onClick={() => setOpen(false)} className="p-2 text-enel-ink">
@@ -84,12 +86,21 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={`block rounded-lg pl-3 pr-3 py-2.5 border-l-2 transition-colors ${
+                className={`flex items-center gap-2 rounded-lg pl-3 pr-3 py-2.5 border-l-2 transition-colors ${
                   attiva ? 'border-enel-green bg-enel-green/5' : 'border-transparent hover:bg-enel-paper'
                 }`}
               >
-                <div className={`text-sm font-medium ${attiva ? 'text-enel-navy' : 'text-enel-ink'}`}>{item.label}</div>
-                <div className="text-xs text-enel-ink/40">{item.hint}</div>
+                {item.href === '/aiuto' && (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-enel-ink/40 shrink-0">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9a2.5 2.5 0 0 1 4.7 1.2c0 1.6-2.2 1.8-2.2 3.3" strokeLinecap="round" />
+                    <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+                  </svg>
+                )}
+                <div>
+                  <div className={`text-sm font-medium ${attiva ? 'text-enel-navy' : 'text-enel-ink'}`}>{item.label}</div>
+                  <div className="text-xs text-enel-ink/40">{item.hint}</div>
+                </div>
               </Link>
             );
           })}
