@@ -63,9 +63,9 @@ export async function POST(req: NextRequest) {
       {
         role: 'user',
         content: [
-          isPdf
+          (isPdf
             ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
-            : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
+            : { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } }) as any,
           { type: 'text', text: 'Analizza questa bolletta secondo le istruzioni, includendo eventuali costi extra.' }
         ]
       }
