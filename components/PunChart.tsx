@@ -23,7 +23,7 @@ export function PunChart({ serie, decimaliAsse = 0 }: { serie: SerieAnnoPun[]; d
 
   const tuttiValori = serie.flatMap((s) => s.valori.filter((v): v is number => v != null));
   const min = Math.min(0, ...tuttiValori) * 0.95;
-  const max = Math.max(...tuttiValori, 10) * 1.08;
+  const max = (tuttiValori.length > 0 ? Math.max(...tuttiValori) : 1) * 1.08;
 
   const x = (meseIndex: number) => PAD_L + (meseIndex / 11) * plotW;
   const y = (valore: number) => PAD_T + plotH - ((valore - min) / (max - min || 1)) * plotH;
