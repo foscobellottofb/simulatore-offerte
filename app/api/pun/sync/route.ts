@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/db';
+import { estraiJson } from '@/lib/estraiJson';
 
 // Richiede ANTHROPIC_API_KEY (già usata per l'OCR delle bollette concorrenti,
 // vedi app/api/ocr/route.ts). Protetta dal login admin via middleware.ts,
@@ -56,8 +57,7 @@ export async function POST() {
 
   let parsed: { mesi: { anno: number; mese: number; valoreMwh: number; fonte: string; confidenza: string }[] };
   try {
-    const pulito = testo.replace(/```json|```/g, '').trim();
-    parsed = JSON.parse(pulito);
+    parsed = estraiJson(testo);
   } catch {
     return NextResponse.json({ error: 'Risposta non interpretabile, riprova.', raw: testo }, { status: 422 });
   }

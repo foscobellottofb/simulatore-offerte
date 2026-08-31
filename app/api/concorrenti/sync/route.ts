@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/db';
+import { estraiJson } from '@/lib/estraiJson';
 
 // Vedi commento in app/api/pun/sync/route.ts sulla configurazione richiesta.
 // A differenza del PUN (dato oggettivo pubblicato da un ente unico), le
@@ -95,8 +96,7 @@ export async function POST() {
     }[];
   };
   try {
-    const pulito = testo.replace(/```json|```/g, '').trim();
-    parsed = JSON.parse(pulito);
+    parsed = estraiJson(testo);
   } catch {
     return NextResponse.json({ error: 'Risposta non interpretabile, riprova.', raw: testo }, { status: 422 });
   }
