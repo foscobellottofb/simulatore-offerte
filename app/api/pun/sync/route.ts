@@ -11,10 +11,12 @@ const anthropic = new Anthropic();
 const SYSTEM_PROMPT = `Sei un ricercatore che consulta il web per trovare il valore ufficiale del
 PUN Index GME (indice del Gestore dei Mercati Energetici italiano, mercato elettrico all'ingrosso).
 
-Cerca sul web i valori medi mensili del PUN Index GME (in €/MWh) per gli ULTIMI 3 mesi solari
-completi rispetto a oggi, dando priorità a mercatoelettrico.org come fonte primaria e, se non
-disponibile, a fonti secondarie affidabili (fornitori di energia, comparatori) che citano
-esplicitamente il dato GME.
+Cerca sul web i valori medi mensili del PUN Index GME (in €/MWh) per TUTTI i mesi completi degli
+ultimi 18-24 mesi rispetto a oggi per cui riesci a trovare un dato affidabile — non fermarti ai primi
+2-3 mesi: cerca specificamente tabelle o articoli che riportino serie storiche di più mesi consecutivi
+(spesso un singolo articolo ne elenca 10-15 insieme), non solo il dato dell'ultimo mese. Dai priorità
+a mercatoelettrico.org come fonte primaria e, se non disponibile, a fonti secondarie affidabili
+(fornitori di energia, comparatori) che citano esplicitamente il dato GME.
 
 Rispondi SOLO con un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 {
@@ -42,7 +44,7 @@ export async function POST() {
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: 'Trova i valori PUN mensili più recenti disponibili.' }],
     // Cast a "any": alcune versioni dell'SDK non hanno ancora i tipi TS per

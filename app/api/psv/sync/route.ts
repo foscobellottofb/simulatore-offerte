@@ -11,8 +11,10 @@ const SYSTEM_PROMPT = `Sei un ricercatore che consulta il web per trovare il val
 dell'indice PSV gas (Punto di Scambio Virtuale, gestito da Snam nell'ambito del sistema gas
 italiano, pubblicato/derivato dai dati GME) — l'equivalente del PUN per il gas naturale.
 
-Cerca sul web i valori medi mensili del PSV (in €/Smc) per gli ULTIMI 3 mesi solari completi
-rispetto a oggi, dando priorità a fonti che citano esplicitamente il dato ufficiale GME/Snam o la
+Cerca sul web i valori medi mensili del PSV (in €/Smc) per TUTTI i mesi completi degli ultimi 18-24
+mesi rispetto a oggi per cui riesci a trovare un dato affidabile — non fermarti ai primi 2-3 mesi:
+cerca specificamente tabelle o articoli che riportino serie storiche di più mesi consecutivi (spesso un
+singolo articolo ne elenca 10-15 insieme), non solo il dato dell'ultimo mese. Dai priorità a fonti che citano esplicitamente il dato ufficiale GME/Snam o la
 componente CMEM ARERA (che è calcolata proprio sulla media mensile PSV Day Ahead).
 
 Rispondi SOLO con un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
@@ -43,7 +45,7 @@ export async function POST() {
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: 'Trova i valori PSV gas mensili più recenti disponibili.' }],
     tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
