@@ -86,8 +86,23 @@ export function ConcorrenzaClient() {
 
   const migliorEnel = useMemo(() => {
     const risultati = calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
-    return risultati[0] ?? null;
+    if (risultati.length === 0) return null;
+    // Se nel Simulatore è stata confermata un'offerta specifica (pulsante
+    // "Confronta"), usiamo quella invece della più economica in assoluto —
+    // solo se è ancora tra le offerte disponibili per questo profilo
+    // (commodity/potenza potrebbero essere cambiati da qui).
+    const idSelezionata = typeof window !== 'undefined' ? localStorage.getItem('offertaSelezionataId') : null;
+    if (idSelezionata) {
+      const trovata = risultati.find((r) => r.offerta.id === idSelezionata);
+      if (trovata) return trovata;
+    }
+    return risultati[0];
   }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+
+  const usaOffertaConfermata = useMemo(() => {
+    if (typeof window === 'undefined' || !migliorEnel) return false;
+    return localStorage.getItem('offertaSelezionataId') === migliorEnel.offerta.id;
+  }, [migliorEnel]);
 
   const risultatoConcorrente = useMemo(() => {
     if (prezzoKwh === '' || ccv === '' || parametri.length === 0) return null;
@@ -508,7 +523,14 @@ export function ConcorrenzaClient() {
                 <>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="box-navy p-4">
-                      <div className="text-xs text-white/70 mb-1">Enel — {migliorEnel.offerta.nome}</div>
+                      <div className="text-xs text-white/70 mb-1">
+                        Enel — {migliorEnel.offerta.nome}
+                        {usaOffertaConfermata ? (
+                          <span className="ml-1 text-enel-green">· confermata dal Simulatore</span>
+                        ) : (
+                          <span className="ml-1 text-white/50">· più economica disponibile</span>
+                        )}
+                      </div>
                       <div className="text-xl font-semibold">{euro(migliorEnel.totaleBolletta)}</div>
                     </div>
                     <div className="rounded-lg border border-enel-line p-4">

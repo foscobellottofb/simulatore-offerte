@@ -268,7 +268,13 @@ export function SimulatoreClient() {
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <button className="btn-secondary text-xs py-1" onClick={() => setSelezionata(r.offerta.id)}>
+                      <button
+                        className="btn-secondary text-xs py-1"
+                        onClick={() => {
+                          setSelezionata(r.offerta.id);
+                          localStorage.setItem('offertaSelezionataId', r.offerta.id);
+                        }}
+                      >
                         Confronta
                       </button>
                     </td>
