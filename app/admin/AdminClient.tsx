@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, OffertaConcorrente } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -17,13 +17,16 @@ export function AdminClient() {
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [pun, setPun] = useState<PunMensile[]>([]);
+  const [psv, setPsv] = useState<PsvMensile[]>([]);
   const [concorrenti, setConcorrenti] = useState<OffertaConcorrente[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [salvandoRete, setSalvandoRete] = useState(false);
   const [salvandoPun, setSalvandoPun] = useState(false);
+  const [salvandoPsv, setSalvandoPsv] = useState(false);
   const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
+  const [sincronizzandoPsv, setSincronizzandoPsv] = useState(false);
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'concorrenza' | 'argomentario'>('offerte');
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -39,6 +42,7 @@ export function AdminClient() {
     fetch('/api/parametri').then((r) => r.json()).then(setParametri);
     fetch('/api/fasce-rete').then((r) => r.json()).then(setFasceRete);
     fetch('/api/pun').then((r) => r.json()).then(setPun);
+    fetch('/api/psv').then((r) => r.json()).then(setPsv);
     fetch('/api/concorrenti?includiInattive=1').then((r) => r.json()).then(setConcorrenti);
   }, []);
 
@@ -146,6 +150,62 @@ export function AdminClient() {
       fetch('/api/pun').then((r) => r.json()).then(setPun);
     } finally {
       setSincronizzandoPun(false);
+    }
+  }
+
+  function aggiornaPsv(id: string, valoreSmc: number) {
+    setPsv((prev) => prev.map((p) => (p.id === id ? { ...p, valoreSmc } : p)));
+  }
+
+  async function salvaPsv() {
+    setSalvandoPsv(true);
+    await fetch('/api/psv', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(psv.map((p) => ({ id: p.id, valoreSmc: p.valoreSmc })))
+    });
+    setSalvandoPsv(false);
+  }
+
+  async function aggiungiMesePsv() {
+    const meseStr = prompt('Mese e anno, formato MM-AAAA (es. 09-2026):');
+    if (!meseStr) return;
+    const match = meseStr.trim().match(/^(\d{1,2})-(\d{4})$/);
+    if (!match) {
+      alert('Formato non valido, usa MM-AAAA (es. 09-2026).');
+      return;
+    }
+    const mese = Number(match[1]);
+    const anno = Number(match[2]);
+    const valoreStr = prompt('Valore PSV in €/Smc:');
+    if (!valoreStr) return;
+    const res = await fetch('/api/psv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anno, mese, valoreSmc: Number(valoreStr) })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? 'Errore nel salvataggio.');
+      return;
+    }
+    const nuovo = await res.json();
+    setPsv((prev) => [...prev.filter((p) => !(p.anno === anno && p.mese === mese)), nuovo]);
+  }
+
+  async function sincronizzaPsvDalWeb() {
+    setSincronizzandoPsv(true);
+    try {
+      const res = await fetch('/api/psv/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Sincronizzazione non riuscita.');
+        return;
+      }
+      alert(data.messaggio);
+      fetch('/api/psv').then((r) => r.json()).then(setPsv);
+    } finally {
+      setSincronizzandoPsv(false);
     }
   }
 
@@ -314,6 +374,9 @@ export function AdminClient() {
         </button>
         <button className={tab === 'pun' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('pun')}>
           PUN mensile ({pun.length})
+        </button>
+        <button className={tab === 'psv' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('psv')}>
+          PSV mensile ({psv.length})
         </button>
         <button className={tab === 'concorrenza' ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setTab('concorrenza')}>
           Concorrenza ({concorrenti.length})
@@ -555,6 +618,65 @@ export function AdminClient() {
           )}
           <button className="btn-primary text-sm mt-2" onClick={salvaPun} disabled={salvandoPun || pun.length === 0}>
             {salvandoPun ? 'Salvataggio…' : 'Salva PUN mensile'}
+          </button>
+        </div>
+      )}
+
+      {tab === 'psv' && (
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
+              Valore medio mensile dell'indice PSV gas (€/Smc), l'equivalente del PUN per il gas, usato nel grafico
+              della pagina pubblica "/mercato". Aggiorna qui il mese corrente appena disponibile, o correggi valori
+              stimati con quelli ufficiali.
+            </p>
+            <div className="flex gap-2 shrink-0">
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPsvDalWeb} disabled={sincronizzandoPsv}>
+                {sincronizzandoPsv ? 'Cerco…' : '🔎 Sincronizza da web'}
+              </button>
+              <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePsv}>
+                + Aggiungi mese
+              </button>
+            </div>
+          </div>
+          <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
+            "Sincronizza da web" chiede a Claude di cercare il dato ufficiale sul web e aggiorna i mesi trovati
+            (consuma credito dell'account Anthropic collegato). I mesi aggiornati da fonte non certa restano
+            marcati "stima": controllali comunque prima di un uso puntuale con un cliente.
+          </p>
+          {Array.from(new Set(psv.map((p) => p.anno))).sort((a, b) => b - a).map((anno) => (
+            <div key={anno} className="mb-5">
+              <div className="text-sm font-semibold mb-2">{anno}</div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {psv
+                  .filter((p) => p.anno === anno)
+                  .sort((a, b) => a.mese - b.mese)
+                  .map((p) => (
+                    <div key={p.id} className="border border-enel-line rounded-lg p-2">
+                      <div className="text-[10px] text-enel-ink/50 mb-1">
+                        {['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'][p.mese - 1]}
+                        {p.stimato && <span className="text-enel-amber"> · stima</span>}
+                      </div>
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="input text-xs py-1 px-2"
+                        value={p.valoreSmc}
+                        onChange={(e) => aggiornaPsv(p.id, Number(e.target.value))}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+          {psv.length === 0 && (
+            <div className="text-xs text-enel-ink/40 mb-4">
+              Nessun dato: lancia il seed (endpoint /api/seed/mercato?key=…) per caricare la serie storica di
+              partenza.
+            </div>
+          )}
+          <button className="btn-primary text-sm mt-2" onClick={salvaPsv} disabled={salvandoPsv || psv.length === 0}>
+            {salvandoPsv ? 'Salvataggio…' : 'Salva PSV mensile'}
           </button>
         </div>
       )}

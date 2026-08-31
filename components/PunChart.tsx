@@ -11,7 +11,7 @@ export interface SerieAnnoPun {
   stimati: boolean[]; // stesso indice di valori: true se il punto è una stima
 }
 
-export function PunChart({ serie }: { serie: SerieAnnoPun[] }) {
+export function PunChart({ serie, decimaliAsse = 0 }: { serie: SerieAnnoPun[]; decimaliAsse?: number }) {
   const W = 760;
   const H = 320;
   const PAD_L = 48;
@@ -38,7 +38,7 @@ export function PunChart({ serie }: { serie: SerieAnnoPun[] }) {
         <g key={i}>
           <line x1={PAD_L} x2={W - PAD_R} y1={y(v)} y2={y(v)} stroke="#E1E5E2" strokeWidth={1} />
           <text x={PAD_L - 8} y={y(v) + 3} textAnchor="end" fontSize={10} fill="#8B93A0">
-            {Math.round(v)}
+            {v.toFixed(decimaliAsse)}
           </text>
         </g>
       ))}

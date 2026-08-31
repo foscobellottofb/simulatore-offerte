@@ -122,6 +122,15 @@ export interface PunMensile {
   stimato: boolean;
 }
 
+// PSV mensile (€/Smc), l'equivalente del PUN per il gas, pagina pubblica "/mercato".
+export interface PsvMensile {
+  id: string;
+  anno: number;
+  mese: number; // 1..12
+  valoreSmc: number;
+  stimato: boolean;
+}
+
 // Offerta concorrente indicativa, pagina pubblica "/mercato".
 export interface OffertaConcorrente {
   id: string;

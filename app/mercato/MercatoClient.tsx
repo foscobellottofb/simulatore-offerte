@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PunMensile, OffertaConcorrente } from '@/lib/types';
+import { PunMensile, PsvMensile, OffertaConcorrente } from '@/lib/types';
 import { PunChart, SerieAnnoPun } from '@/components/PunChart';
 
 const MESI_NOME = [
@@ -15,18 +15,24 @@ function euroMwh(n: number) {
 function euroKwh(n: number) {
   return (n / 1000).toLocaleString('it-IT', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €/kWh';
 }
+function euroSmc(n: number) {
+  return n.toLocaleString('it-IT', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €/Smc';
+}
 
 export function MercatoClient() {
   const [pun, setPun] = useState<PunMensile[]>([]);
+  const [psv, setPsv] = useState<PsvMensile[]>([]);
   const [concorrenti, setConcorrenti] = useState<OffertaConcorrente[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/pun').then((r) => r.json()),
+      fetch('/api/psv').then((r) => r.json()),
       fetch('/api/concorrenti').then((r) => r.json())
-    ]).then(([p, c]) => {
+    ]).then(([p, s, c]) => {
       setPun(p);
+      setPsv(s);
       setConcorrenti(c);
       setLoading(false);
     });
@@ -36,6 +42,11 @@ export function MercatoClient() {
     if (pun.length === 0) return null;
     return [...pun].sort((a, b) => (a.anno === b.anno ? b.mese - a.mese : b.anno - a.anno))[0];
   }, [pun]);
+
+  const ultimoPsv = useMemo(() => {
+    if (psv.length === 0) return null;
+    return [...psv].sort((a, b) => (a.anno === b.anno ? b.mese - a.mese : b.anno - a.anno))[0];
+  }, [psv]);
 
   // Confronto con lo stesso mese negli anni precedenti: utile per un
   // consulente che ha davanti un cliente il cui contratto scade adesso, per
@@ -50,6 +61,17 @@ export function MercatoClient() {
       })
       .filter((x): x is { anniFa: number; anno: number; valore: number } => x !== null);
   }, [pun, ultimo]);
+
+  const confrontoAnniPrecedentiPsv = useMemo(() => {
+    if (!ultimoPsv) return [];
+    return [1, 2]
+      .map((indietro) => {
+        const anno = ultimoPsv.anno - indietro;
+        const trovato = psv.find((p) => p.anno === anno && p.mese === ultimoPsv.mese);
+        return trovato ? { anniFa: indietro, anno, valore: trovato.valoreSmc } : null;
+      })
+      .filter((x): x is { anniFa: number; anno: number; valore: number } => x !== null);
+  }, [psv, ultimoPsv]);
 
   const serieChart: SerieAnnoPun[] = useMemo(() => {
     const anni = Array.from(new Set(pun.map((p) => p.anno))).sort((a, b) => a - b);
@@ -66,9 +88,25 @@ export function MercatoClient() {
     });
   }, [pun]);
 
+  const serieChartPsv: SerieAnnoPun[] = useMemo(() => {
+    const anni = Array.from(new Set(psv.map((p) => p.anno))).sort((a, b) => a - b);
+    return anni.map((anno) => {
+      const valori: (number | null)[] = Array(12).fill(null);
+      const stimati: boolean[] = Array(12).fill(false);
+      psv
+        .filter((p) => p.anno === anno)
+        .forEach((p) => {
+          valori[p.mese - 1] = p.valoreSmc;
+          stimati[p.mese - 1] = p.stimato;
+        });
+      return { anno, valori, stimati };
+    });
+  }, [psv]);
+
   const concorrentiWeb = concorrenti.filter((c) => c.canale === 'WEB');
   const concorrentiAltro = concorrenti.filter((c) => c.canale !== 'WEB');
   const ciSonoStimati = pun.some((p) => p.stimato);
+  const ciSonoStimatiPsv = psv.some((p) => p.stimato);
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
@@ -149,6 +187,61 @@ export function MercatoClient() {
               Valori medi mensili in €/MWh.{' '}
               {ciSonoStimati && 'I tratti tratteggiati indicano mesi stimati/da fonte secondaria, in attesa di conferma dal sito ufficiale GME. '}
               Fonte: PUN Index GME, elaborazione interna aggiornabile da Admin → "PUN mensile".
+            </p>
+          </div>
+
+          {/* Sezione GAS — PSV */}
+          <div className="card p-5 mb-6">
+            <div className="text-sm font-semibold mb-2">Cos'è il PSV, in breve (gas)</div>
+            <p className="text-sm text-enel-ink/70 leading-relaxed">
+              Il <strong>PSV (Punto di Scambio Virtuale)</strong>, gestito da Snam, è l'equivalente del PUN ma per il
+              gas naturale: il prezzo di riferimento all'ingrosso su cui si basano sia il servizio di tutela (ARERA
+              lo usa per calcolare la componente materia prima) sia le offerte del mercato libero, fisse o
+              indicizzate. Segue da vicino il TTF, il benchmark europeo del gas.
+            </p>
+          </div>
+
+          {ultimoPsv && (
+            <div className="grid sm:grid-cols-3 gap-4 mb-6">
+              <div className="card p-5">
+                <div className="text-xs text-enel-ink/50 uppercase tracking-wide mb-1">
+                  PSV {MESI_NOME[ultimoPsv.mese - 1]} {ultimoPsv.anno}
+                  {ultimoPsv.stimato && <span className="text-enel-amber"> · stima</span>}
+                </div>
+                <div className="text-2xl font-semibold text-enel-navy">{euroSmc(ultimoPsv.valoreSmc)}</div>
+              </div>
+              {confrontoAnniPrecedentiPsv.map((c) => {
+                const delta = ultimoPsv.valoreSmc - c.valore;
+                const percento = (delta / c.valore) * 100;
+                return (
+                  <div className="card p-5" key={c.anniFa}>
+                    <div className="text-xs text-enel-ink/50 uppercase tracking-wide mb-1">
+                      Stesso mese {c.anniFa === 1 ? '1 anno fa' : '2 anni fa'} ({c.anno})
+                    </div>
+                    <div className="text-2xl font-semibold">{euroSmc(c.valore)}</div>
+                    <div className={`text-xs mt-1 font-medium ${delta >= 0 ? 'text-red-600' : 'text-enel-green'}`}>
+                      {delta >= 0 ? '+' : ''}
+                      {percento.toFixed(0)}% rispetto ad oggi
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="card p-5 mb-6">
+            <div className="text-sm font-semibold mb-3">Andamento PSV mensile — confronto tra anni</div>
+            {serieChartPsv.length > 0 ? (
+              <PunChart serie={serieChartPsv} decimaliAsse={2} />
+            ) : (
+              <div className="text-xs text-enel-ink/40">
+                Nessun dato ancora caricato: lancia il seed (endpoint /api/seed/mercato?key=…) da Admin.
+              </div>
+            )}
+            <p className="text-[11px] text-enel-ink/40 mt-3">
+              Valori medi mensili in €/Smc.{' '}
+              {ciSonoStimatiPsv && 'I tratti tratteggiati indicano mesi stimati/da fonte secondaria, in attesa di conferma dalla fonte ufficiale. '}
+              Fonte: indice PSV, elaborazione interna aggiornabile da Admin → "PSV mensile".
             </p>
           </div>
 

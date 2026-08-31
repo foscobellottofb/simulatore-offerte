@@ -336,3 +336,54 @@ export const PUN_MENSILE_SEED: Prisma.PunMensileCreateManyInput[] = [
  * "Concorrenza".
  */
 export const OFFERTE_CONCORRENTI_SEED: Prisma.OffertaConcorrenteCreateManyInput[] = [];
+
+/**
+ * Valori medi mensili dell'indice PSV gas (€/Smc), l'equivalente del PUN per
+ * il gas naturale, per il grafico della pagina pubblica "/mercato".
+ *
+ * Stessa nota di cautela del PUN: nessun accesso automatico diretto a
+ * GME/Snam in fase di sviluppo, valori ricostruiti da più fonti secondarie
+ * incrociate tra loro (in particolare i mesi da giugno 2025 a luglio 2026
+ * sono confermati su più fonti indipendenti con valori coincidenti). I mesi
+ * con "stimato: true" sono interpolati dal contesto: verificali sul sito
+ * ufficiale prima di un uso puntuale con un cliente. Aggiornabili da Admin →
+ * "PSV mensile".
+ */
+export const PSV_MENSILE_SEED: Prisma.PsvMensileCreateManyInput[] = [
+  // 2024 — anno "relativamente stabile" secondo le fonti, valori mensili
+  // interpolati salvo ottobre e novembre (confermati)
+  { anno: 2024, mese: 1, valoreSmc: 0.37, stimato: true },
+  { anno: 2024, mese: 2, valoreSmc: 0.36, stimato: true },
+  { anno: 2024, mese: 3, valoreSmc: 0.35, stimato: true },
+  { anno: 2024, mese: 4, valoreSmc: 0.35, stimato: true },
+  { anno: 2024, mese: 5, valoreSmc: 0.36, stimato: true },
+  { anno: 2024, mese: 6, valoreSmc: 0.37, stimato: true },
+  { anno: 2024, mese: 7, valoreSmc: 0.38, stimato: true },
+  { anno: 2024, mese: 8, valoreSmc: 0.38, stimato: true },
+  { anno: 2024, mese: 9, valoreSmc: 0.39, stimato: true },
+  { anno: 2024, mese: 10, valoreSmc: 0.436, stimato: false },
+  { anno: 2024, mese: 11, valoreSmc: 0.483, stimato: false },
+  { anno: 2024, mese: 12, valoreSmc: 0.5, stimato: true },
+  // 2025
+  { anno: 2025, mese: 1, valoreSmc: 0.5, stimato: true },
+  { anno: 2025, mese: 2, valoreSmc: 0.566, stimato: false },
+  { anno: 2025, mese: 3, valoreSmc: 0.5, stimato: true },
+  { anno: 2025, mese: 4, valoreSmc: 0.46, stimato: true },
+  { anno: 2025, mese: 5, valoreSmc: 0.44, stimato: true },
+  { anno: 2025, mese: 6, valoreSmc: 0.418, stimato: false },
+  { anno: 2025, mese: 7, valoreSmc: 0.392, stimato: false },
+  { anno: 2025, mese: 8, valoreSmc: 0.38, stimato: false },
+  { anno: 2025, mese: 9, valoreSmc: 0.373, stimato: false },
+  { anno: 2025, mese: 10, valoreSmc: 0.354, stimato: false },
+  { anno: 2025, mese: 11, valoreSmc: 0.348, stimato: false },
+  { anno: 2025, mese: 12, valoreSmc: 0.328, stimato: false },
+  // 2026 (fino ad agosto, incluso il parziale)
+  { anno: 2026, mese: 1, valoreSmc: 0.404, stimato: false },
+  { anno: 2026, mese: 2, valoreSmc: 0.377, stimato: false },
+  { anno: 2026, mese: 3, valoreSmc: 0.558, stimato: false },
+  { anno: 2026, mese: 4, valoreSmc: 0.492, stimato: false },
+  { anno: 2026, mese: 5, valoreSmc: 0.501, stimato: false },
+  { anno: 2026, mese: 6, valoreSmc: 0.504, stimato: false },
+  { anno: 2026, mese: 7, valoreSmc: 0.606, stimato: false },
+  { anno: 2026, mese: 8, valoreSmc: 0.62, stimato: true }
+];

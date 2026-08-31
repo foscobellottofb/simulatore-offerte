@@ -161,6 +161,20 @@ model PunMensile {
   @@unique([anno, mese])
 }
 
+// Indice PSV (gas), l'equivalente del PUN per il gas naturale: media mensile
+// del punto di scambio virtuale gestito da Snam, in €/Smc (unità già usata
+// altrove nell'app per il gas, coerente con come compare in bolletta).
+model PsvMensile {
+  id        String   @id @default(cuid())
+  anno      Int
+  mese      Int // 1..12
+  valoreSmc Float // €/Smc
+  stimato   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([anno, mese])
+}
+
 // Prezzi indicativi delle principali offerte concorrenti, inseriti a mano
 // dal team commerciale (nessuna fonte pubblica affidabile li aggrega). Il
 // campo "canale" distingue le offerte "solo web" (spesso con condizioni non
