@@ -4,17 +4,36 @@ import { useEffect, useMemo, useState } from 'react';
 import { Offerta, ParametroDettaglio, FasciaRete, RisultatoCalcolo, Commodity } from '@/lib/types';
 import { calcolaTutteLeOfferte } from '@/lib/calcoli';
 import { AiutoCampo } from '@/components/AiutoCampo';
+import { leggiPersistito, scriviPersistito } from '@/lib/persistiCampi';
 
 function euro(n: number) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
+// Campi condivisi con "Confronto concorrenza": modificati in una pagina,
+// restano compilati anche passando all'altra, senza dover ricaricare la
+// foto o ridigitare tutto.
+interface DatiClienteSalvati {
+  commodity: Commodity;
+  tipoConsumo: 'ANNUO' | 'PERIODO';
+  consumoKwh: number | '';
+  potenzaKw: number | '';
+  giorniFattura: number | '';
+  nomeCliente: string;
+  pod: string;
+  indirizzoFornitura: string;
+  citta: string;
+  codiceFiscalePiva: string;
+}
+
 export function SimulatoreClient() {
-  const [commodity, setCommodity] = useState<Commodity>('LUCE');
-  const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>('PERIODO');
-  const [consumoKwh, setConsumoKwh] = useState<number | ''>(397);
-  const [potenzaKw, setPotenzaKw] = useState<number | ''>(3);
-  const [giorniFattura, setGiorniFattura] = useState<number | ''>(60);
+  const salvati = leggiPersistito<DatiClienteSalvati>('simulotto:cliente');
+
+  const [commodity, setCommodity] = useState<Commodity>(salvati.commodity ?? 'LUCE');
+  const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>(salvati.tipoConsumo ?? 'PERIODO');
+  const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
+  const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
+  const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
   const [percentualeConsumoF2, setPercentualeConsumoF2] = useState(20);
   const [percentualeConsumoF3, setPercentualeConsumoF3] = useState(0);
 
@@ -23,11 +42,27 @@ export function SimulatoreClient() {
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [loading, setLoading] = useState(true);
   const [selezionata, setSelezionata] = useState<string | null>(null);
-  const [nomeCliente, setNomeCliente] = useState('');
-  const [pod, setPod] = useState('');
-  const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
-  const [citta, setCitta] = useState('');
-  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
+  const [nomeCliente, setNomeCliente] = useState(salvati.nomeCliente ?? '');
+  const [pod, setPod] = useState(salvati.pod ?? '');
+  const [indirizzoFornitura, setIndirizzoFornitura] = useState(salvati.indirizzoFornitura ?? '');
+  const [citta, setCitta] = useState(salvati.citta ?? '');
+  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState(salvati.codiceFiscalePiva ?? '');
+
+  // Salva ad ogni modifica, così "Confronto concorrenza" li ritrova.
+  useEffect(() => {
+    scriviPersistito('simulotto:cliente', {
+      commodity,
+      tipoConsumo,
+      consumoKwh,
+      potenzaKw,
+      giorniFattura,
+      nomeCliente,
+      pod,
+      indirizzoFornitura,
+      citta,
+      codiceFiscalePiva
+    });
+  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
   useEffect(() => {
     Promise.all([

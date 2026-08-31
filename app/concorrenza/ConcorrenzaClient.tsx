@@ -5,31 +5,82 @@ import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita } 
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
 import { Argomentario } from '@/components/Argomentario';
 import { AiutoCampo } from '@/components/AiutoCampo';
+import { leggiPersistito, scriviPersistito } from '@/lib/persistiCampi';
 
 function euro(n: number) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
+// Stessa forma usata in SimulatoreClient: campi condivisi tra le due pagine.
+interface DatiClienteSalvati {
+  commodity: Commodity;
+  tipoConsumo: 'ANNUO' | 'PERIODO';
+  consumoKwh: number | '';
+  potenzaKw: number | '';
+  giorniFattura: number | '';
+  nomeCliente: string;
+  pod: string;
+  indirizzoFornitura: string;
+  citta: string;
+  codiceFiscalePiva: string;
+}
+
+// Campi che esistono solo qui (dati del concorrente): persistiti a parte,
+// così non "sporcano" i dati condivisi col Simulatore.
+interface DatiConcorrenteSalvati {
+  prezzoKwh: number | '';
+  ccv: number | '';
+  tipoPrezzoConcorrente: 'FISSO' | 'VARIABILE';
+  totaleDichiarato: number | '';
+  nomeFornitore: string;
+}
+
 export function ConcorrenzaClient() {
-  const [commodity, setCommodity] = useState<Commodity>('LUCE');
-  const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>('PERIODO');
-  const [consumoKwh, setConsumoKwh] = useState<number | ''>(397);
-  const [potenzaKw, setPotenzaKw] = useState<number | ''>(3);
-  const [giorniFattura, setGiorniFattura] = useState<number | ''>(60);
-  const [nomeCliente, setNomeCliente] = useState('');
-  const [pod, setPod] = useState('');
-  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState('');
-  const [indirizzoFornitura, setIndirizzoFornitura] = useState('');
-  const [citta, setCitta] = useState('');
+  const salvati = leggiPersistito<DatiClienteSalvati>('simulotto:cliente');
+  const salvatiConcorrente = leggiPersistito<DatiConcorrenteSalvati>('simulotto:concorrente');
+
+  const [commodity, setCommodity] = useState<Commodity>(salvati.commodity ?? 'LUCE');
+  const [tipoConsumo, setTipoConsumo] = useState<'ANNUO' | 'PERIODO'>(salvati.tipoConsumo ?? 'PERIODO');
+  const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
+  const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
+  const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
+  const [nomeCliente, setNomeCliente] = useState(salvati.nomeCliente ?? '');
+  const [pod, setPod] = useState(salvati.pod ?? '');
+  const [codiceFiscalePiva, setCodiceFiscalePiva] = useState(salvati.codiceFiscalePiva ?? '');
+  const [indirizzoFornitura, setIndirizzoFornitura] = useState(salvati.indirizzoFornitura ?? '');
+  const [citta, setCitta] = useState(salvati.citta ?? '');
   const [nomeConsulente, setNomeConsulente] = useState('');
   const [scriptVendita, setScriptVendita] = useState<string | null>(null);
   const [scriptStato, setScriptStato] = useState<'idle' | 'genera' | 'errore'>('idle');
 
-  const [prezzoKwh, setPrezzoKwh] = useState<number | ''>('');
-  const [ccv, setCcv] = useState<number | ''>('');
-  const [tipoPrezzoConcorrente, setTipoPrezzoConcorrente] = useState<'FISSO' | 'VARIABILE'>('FISSO');
-  const [totaleDichiarato, setTotaleDichiarato] = useState<number | ''>('');
-  const [nomeFornitore, setNomeFornitore] = useState('');
+  const [prezzoKwh, setPrezzoKwh] = useState<number | ''>(salvatiConcorrente.prezzoKwh ?? '');
+  const [ccv, setCcv] = useState<number | ''>(salvatiConcorrente.ccv ?? '');
+  const [tipoPrezzoConcorrente, setTipoPrezzoConcorrente] = useState<'FISSO' | 'VARIABILE'>(
+    salvatiConcorrente.tipoPrezzoConcorrente ?? 'FISSO'
+  );
+  const [totaleDichiarato, setTotaleDichiarato] = useState<number | ''>(salvatiConcorrente.totaleDichiarato ?? '');
+  const [nomeFornitore, setNomeFornitore] = useState(salvatiConcorrente.nomeFornitore ?? '');
+
+  // Salva ad ogni modifica, così il Simulatore (dati condivisi) e la
+  // prossima visita qui (dati concorrente) li ritrovano.
+  useEffect(() => {
+    scriviPersistito('simulotto:cliente', {
+      commodity,
+      tipoConsumo,
+      consumoKwh,
+      potenzaKw,
+      giorniFattura,
+      nomeCliente,
+      pod,
+      indirizzoFornitura,
+      citta,
+      codiceFiscalePiva
+    });
+  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
+
+  useEffect(() => {
+    scriviPersistito('simulotto:concorrente', { prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore });
+  }, [prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore]);
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
