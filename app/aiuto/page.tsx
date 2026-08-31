@@ -138,7 +138,7 @@ export default function AiutoPage() {
               </div>
             </div>
             <div>
-              <div className="font-medium">✍️ Script di vendita generato dall'AI</div>
+              <div className="font-medium">✍️ Caracozzo AI consiglia</div>
               <div className="text-enel-ink/60">
                 Oltre alle frasi fisse, un pulsante genera un discorso su misura per quel cliente specifico: il
                 risparmio calcolato, il fatto che avrà un consulente dedicato che lo segue nel tempo, e la

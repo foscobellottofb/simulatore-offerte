@@ -356,7 +356,14 @@ export function ConcorrenzaClient() {
             </label>
             {operatorKey ? (
               <>
-                <input type="file" accept="image/*,.pdf" multiple className="input mb-2" onChange={handleFoto} />
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  className="input mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onChange={handleFoto}
+                  disabled={ocrStato === 'analisi'}
+                />
                 <button
                   className="text-[11px] text-enel-ink/30 hover:underline mb-2"
                   onClick={() => {
@@ -395,7 +402,17 @@ export function ConcorrenzaClient() {
                 )}
               </div>
             )}
-            {ocrStato === 'analisi' && <div className="text-xs text-enel-ink/50 mb-2">Analisi del documento in corso…</div>}
+            {ocrStato === 'analisi' && (
+              <div className="flex items-center gap-2 rounded-lg border border-enel-navy/30 bg-enel-navy/5 px-3 py-2 mb-2">
+                <span
+                  className="inline-block w-3.5 h-3.5 rounded-full border-2 border-enel-navy/30 border-t-enel-navy animate-spin"
+                  aria-hidden="true"
+                />
+                <span className="text-xs font-medium text-enel-navy">
+                  Sto leggendo il documento, attendere… (può richiedere alcuni secondi, soprattutto con più pagine)
+                </span>
+              </div>
+            )}
             {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
 
@@ -544,7 +561,7 @@ export function ConcorrenzaClient() {
 
           {migliorEnel && risultatoConcorrente && (
             <div className="card p-4">
-              <div className="text-sm font-semibold mb-1">✍️ Script di vendita (AI)</div>
+              <div className="text-sm font-semibold mb-1" style={{ color: '#006FBB' }}>✍️ Caracozzo AI consiglia</div>
               <p className="text-xs text-enel-ink/50 mb-3">
                 Genera un discorso pronto da leggere al cliente: mette in evidenza il risparmio, il fatto che da
                 oggi ha un consulente dedicato che segue le sue forniture nel tempo, e la solidità del marchio
