@@ -476,7 +476,28 @@ export function ConcorrenzaClient() {
               <button
                 type="button"
                 className="text-xs text-enel-ink/60 hover:text-enel-ink underline"
+                title="Azzera anche i dati cliente (commodity, consumo, nome, POD, indirizzo...): sono condivisi con la pagina Simulatore offerte."
                 onClick={() => {
+                  const confermato = window.confirm(
+                    'Resettare TUTTI i dati di questo cliente (commodity, consumo, nome, POD, indirizzo, e i dati del concorrente)?\n\n' +
+                      'Questi dati sono condivisi con la pagina "Simulatore offerte": verranno azzerati anche lì.'
+                  );
+                  if (!confermato) return;
+
+                  // Dati cliente (condivisi con "Simulatore offerte" tramite lo stesso storage)
+                  setCommodity('LUCE');
+                  setTipoConsumo('PERIODO');
+                  setConsumoKwh(397);
+                  setPotenzaKw(3);
+                  setGiorniFattura(60);
+                  setZonaGas(ZONA_GAS_DEFAULT);
+                  setNomeCliente('');
+                  setPod('');
+                  setIndirizzoFornitura('');
+                  setCitta('');
+                  setCodiceFiscalePiva('');
+
+                  // Dati del concorrente (solo di questa pagina)
                   setPrezzoKwh('');
                   setCcv('');
                   setTipoPrezzoConcorrente('FISSO');
@@ -488,7 +509,7 @@ export function ConcorrenzaClient() {
                   setOcrNote(null);
                 }}
               >
-                Resetta valori
+                Resetta tutti i valori
               </button>
             </div>
 
