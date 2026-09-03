@@ -16,7 +16,7 @@ const anthropic = new Anthropic();
 // chiamata è piccola e veloce (un solo fornitore, poche ricerche web), così
 // resta comodamente sotto il limite di 10s del piano Vercel Hobby — l'unico
 // modo pratico di coprire "tutti i fornitori" restando dentro quel limite.
-export const FORNITORI_RICERCA = [
+const FORNITORI_RICERCA = [
   'A2A', 'Iren', 'Edison', 'Eni Plenitude', 'Sorgenia', 'Acea', 'Hera Comm',
   'Engie', 'Illumia', 'Wekiwi', 'Octopus Energy', 'Green Network', 'NeN', 'Dolomiti Energia'
 ];
