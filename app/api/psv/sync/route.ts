@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     max_tokens: 8000,
     system: buildSystemPrompt(mesi),
     messages: [{ role: 'user', content: `Trova i valori PSV gas mensili degli ultimi ${mesi} mesi disponibili.` }],
-    tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }] as any
   });
 
   const testo = message.content

@@ -21,6 +21,8 @@ const FORNITORI_RICERCA = [
   'Engie', 'Illumia', 'Wekiwi', 'Octopus Energy', 'Green Network', 'NeN', 'Dolomiti Energia'
 ];
 
+const MAX_RICERCHE_PER_CHIAMATA = 4;
+
 function buildSystemPrompt(fornitore: string | null, webCount: number, fissoCount: number, variabileCount: number) {
   const totaleMax = webCount + fissoCount + variabileCount;
 
@@ -67,10 +69,13 @@ pagine ufficiali business del/dei fornitore/i: solo offerte chiaramente pubblica
 
 REQUISITO IMPORTANTE — un'offerta è utile solo se è COMPLETA: includila SOLO se riesci a determinare
 sia "prezzoKwh" (prezzo unitario materia energia) SIA "ccvMensile" (corrispettivo fisso mensile), con
-valori numerici reali, non null. Se una pagina indica solo uno dei due (es. solo il prezzo, senza dire
-il CCV, o viceversa), NON includere quell'offerta nei risultati: è meglio restituire meno offerte ma
-tutte utilizzabili, piuttosto che offerte con un campo mancante che poi non si possono usare per un
-confronto numerico.
+valori numerici reali, non null. NON è però obbligatorio trovarne per forza: hai un numero LIMITATO di
+ricerche disponibili in questa chiamata (${MAX_RICERCHE_PER_CHIAMATA}), quindi NON insistere a lungo su
+una singola offerta se non trovi subito entrambi i valori nella prima pagina — prova al massimo 1-2
+pagine per quell'offerta, poi passa oltre senza includerla, piuttosto che consumare tutte le ricerche
+disponibili cercando di completare un solo dato. È del tutto normale e accettabile restituire "offerte":
+[] se in questo budget di ricerche non trovi nulla di completo: è molto meglio di insistere e sprecare
+ricerche senza risultato.
 
 Rispondi SOLO con un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 {
@@ -141,7 +146,7 @@ export async function POST(req: NextRequest) {
           : 'Cerca le offerte business luce e gas attualmente pubblicate dai principali fornitori italiani, facendo una ricerca per ciascun fornitore elencato nelle istruzioni, rispettando i tetti per categoria indicati.'
       }
     ],
-    tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: MAX_RICERCHE_PER_CHIAMATA }] as any
   });
 
   const testo = message.content

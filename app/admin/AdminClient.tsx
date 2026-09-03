@@ -225,8 +225,45 @@ export function AdminClient() {
     'A2A', 'Iren', 'Edison', 'Eni Plenitude', 'Sorgenia', 'Acea', 'Hera Comm',
     'Engie', 'Illumia', 'Wekiwi', 'Octopus Energy', 'Green Network', 'NeN', 'Dolomiti Energia'
   ];
+  // Deve corrispondere a MAX_RICERCHE_PER_CHIAMATA in app/api/concorrenti/sync/route.ts
+  // (qui serve solo per mostrare la stima all'utente prima di partire).
+  const MAX_RICERCHE_ADMIN = 4;
+
+  const [testandoOpenData, setTestandoOpenData] = useState(false);
+  const [risultatoOpenData, setRisultatoOpenData] = useState<any>(null);
+
+  async function testaAccessoOpenData() {
+    setTestandoOpenData(true);
+    setRisultatoOpenData(null);
+    try {
+      const res = await fetch('/api/concorrenti/opendata-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        setRisultatoOpenData({ ok: false, errore: 'Risposta non-JSON dal server (vedi Vercel logs per dettagli).' });
+        return;
+      }
+      setRisultatoOpenData(data);
+    } catch (err) {
+      setRisultatoOpenData({ ok: false, errore: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setTestandoOpenData(false);
+    }
+  }
 
   async function cercaConcorrentiDalWeb() {
+    const confermato = window.confirm(
+      `Stai per lanciare fino a 14 chiamate (una per fornitore), ciascuna con un tetto di ${MAX_RICERCHE_ADMIN} ricerche web.\n\n` +
+        `Costo massimo stimato: circa 1,5-2,5 € totali (con questo limite tecnico ora attivo, non può più superarlo di molto). ` +
+        `Richiede qualche minuto.\n\nProcedere?`
+    );
+    if (!confermato) return;
+
     setSincronizzandoConcorrenti(true);
     // Budget residuo per categoria: si esaurisce man mano che i fornitori
     // trovano offerte, così ci si ferma appena raggiunti i totali richiesti
@@ -830,7 +867,15 @@ export function AdminClient() {
                 />
               </div>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={cercaConcorrentiDalWeb} disabled={sincronizzandoConcorrenti}>
-                {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web'}
+                {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web (a pagamento)'}
+              </button>
+              <button
+                className="btn-secondary text-xs whitespace-nowrap"
+                onClick={testaAccessoOpenData}
+                disabled={testandoOpenData}
+                title="Nessuna chiamata IA, nessun costo: prova solo a leggere i dati open data ufficiali ARERA"
+              >
+                {testandoOpenData ? 'Provo…' : '🧪 Testa Open Data ARERA (gratis)'}
               </button>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiConcorrente}>
                 + Aggiungi offerta
@@ -840,8 +885,37 @@ export function AdminClient() {
           <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
             "Cerca dal web" chiede a Claude di trovare offerte pubbliche online (consuma credito Anthropic): i
             risultati entrano <strong>non attivi</strong> e non compaiono su "/mercato" finché non li controlli e
-            spunti "Attiva".
+            spunti "Attiva". "Testa Open Data ARERA" è invece gratuito: prova solo a leggere i dati aperti
+            ufficiali di ilportaleofferte.it, senza IA — se funziona, costruiamo un importer a costo zero al posto
+            della ricerca a pagamento.
           </p>
+          {risultatoOpenData && (
+            <div className="rounded-lg border border-enel-line bg-enel-paper p-3 mb-4 text-xs">
+              <div className="font-semibold mb-1">
+                {risultatoOpenData.ok ? '✅ Accesso riuscito' : '❌ Accesso fallito'}
+                {risultatoOpenData.status && ` (status ${risultatoOpenData.status})`}
+              </div>
+              {risultatoOpenData.errore && <div className="text-red-600 mb-2">{risultatoOpenData.errore}</div>}
+              {risultatoOpenData.linkCsvTrovati?.length > 0 && (
+                <div className="mb-2">
+                  <div className="text-enel-ink/60 mb-1">File CSV trovati nella pagina:</div>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {risultatoOpenData.linkCsvTrovati.map((l: string, i: number) => (
+                      <li key={i} className="break-all">{l}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {risultatoOpenData.anteprimaContenuto && (
+                <details>
+                  <summary className="cursor-pointer text-enel-ink/60">Anteprima contenuto pagina (primi 3000 caratteri)</summary>
+                  <pre className="whitespace-pre-wrap break-all bg-white border border-enel-line rounded p-2 mt-1 max-h-64 overflow-auto">
+                    {risultatoOpenData.anteprimaContenuto}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
           <div className="space-y-3">
             {concorrenti.map((c) => {
               const oggi = new Date().toISOString().slice(0, 10);

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     messages: [{ role: 'user', content: `Trova i valori PUN mensili degli ultimi ${mesi} mesi disponibili.` }],
     // Cast a "any": alcune versioni dell'SDK non hanno ancora i tipi TS per
     // questo strumento, ma l'API lo accetta comunque (è solo JSON inoltrato).
-    tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 10 }] as any
   });
 
   const testo = message.content
