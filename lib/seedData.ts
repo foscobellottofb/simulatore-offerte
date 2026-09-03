@@ -1,5 +1,6 @@
 import { Commodity, TipoPrezzo } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { ZONE_GAS, ZONA_GAS_DEFAULT, slugZonaGas } from './zoneGas';
 
 /**
  * Offerte ricostruite dal foglio "Import SharePoint" del tuo file Excel
@@ -198,24 +199,45 @@ export const PARAMETRI_SEED: Prisma.ParametroDettaglioCreateManyInput[] = [
   { chiave: 'ACCISA_GAS_SMC', etichetta: 'Accisa gas', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 0, unita: '€/Smc', ordinamento: 1 },
   { chiave: 'IVA_PERC_GAS', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 22, unita: '%', ordinamento: 2 },
   { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 },
-  {
-    chiave: 'QUOTA_FISSA_TRASPORTO_GAS',
-    etichetta: 'Quota fissa trasporto',
-    categoria: 'Trasporto e oneri di sistema',
-    commodity: Commodity.GAS,
-    valore: 40.6125,
-    unita: '€/fattura',
-    ordinamento: 4
-  },
-  {
-    chiave: 'QUOTA_FISSA_ONERI_GAS',
-    etichetta: 'Quota fissa oneri di sistema',
-    categoria: 'Trasporto e oneri di sistema',
-    commodity: Commodity.GAS,
-    valore: -1.8025,
-    unita: '€/fattura',
-    ordinamento: 5
-  }
+  ...ZONE_GAS.flatMap((zona, i): Prisma.ParametroDettaglioCreateManyInput[] => {
+    const slug = slugZonaGas(zona);
+    // Solo "Nord Orientale" ha valori reali (presi da una bolletta Bluenergy
+    // verificata, cliente in Veneto). Le altre 5 zone sono lasciate a 0 e
+    // marcate esplicitamente "da verificare": vanno compilate da Admin coi
+    // valori ufficiali ARERA della zona (tariffe di distribuzione, misura e
+    // oneri generali) prima di usarle per un confronto reale.
+    const daVerificare = zona !== ZONA_GAS_DEFAULT;
+    const suffix = daVerificare ? ' (⚠️ da verificare)' : '';
+    return [
+      {
+        chiave: `GAS_TRASPORTO_FISSO_${slug}`,
+        etichetta: `Quota fissa trasporto — ${zona}${suffix}`,
+        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
+        commodity: Commodity.GAS,
+        valore: daVerificare ? 0 : 40.6125,
+        unita: '€/fattura',
+        ordinamento: 10 + i * 3
+      },
+      {
+        chiave: `GAS_TRASPORTO_VARIABILE_${slug}`,
+        etichetta: `Quota variabile trasporto — ${zona} (⚠️ da verificare, manca in tutte le zone)`,
+        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
+        commodity: Commodity.GAS,
+        valore: 0,
+        unita: '€/Smc',
+        ordinamento: 11 + i * 3
+      },
+      {
+        chiave: `GAS_ONERI_FISSO_${slug}`,
+        etichetta: `Quota fissa oneri di sistema — ${zona}${suffix}`,
+        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
+        commodity: Commodity.GAS,
+        valore: daVerificare ? 0 : -1.8025,
+        unita: '€/fattura',
+        ordinamento: 12 + i * 3
+      }
+    ];
+  })
 ];
 
 /**

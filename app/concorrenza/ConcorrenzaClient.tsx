@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita, OffertaConcorrente } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
+import { ZONE_GAS, ZONA_GAS_DEFAULT } from '@/lib/zoneGas';
 import { Argomentario } from '@/components/Argomentario';
 import { AiutoCampo } from '@/components/AiutoCampo';
 import { leggiPersistito, scriviPersistito } from '@/lib/persistiCampi';
@@ -18,6 +19,7 @@ interface DatiClienteSalvati {
   consumoKwh: number | '';
   potenzaKw: number | '';
   giorniFattura: number | '';
+  zonaGas: string;
   nomeCliente: string;
   pod: string;
   indirizzoFornitura: string;
@@ -44,6 +46,7 @@ export function ConcorrenzaClient() {
   const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
   const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
   const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
+  const [zonaGas, setZonaGas] = useState<string>(salvati.zonaGas ?? ZONA_GAS_DEFAULT);
   const [nomeCliente, setNomeCliente] = useState(salvati.nomeCliente ?? '');
   const [pod, setPod] = useState(salvati.pod ?? '');
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState(salvati.codiceFiscalePiva ?? '');
@@ -70,13 +73,14 @@ export function ConcorrenzaClient() {
       consumoKwh,
       potenzaKw,
       giorniFattura,
+      zonaGas,
       nomeCliente,
       pod,
       indirizzoFornitura,
       citta,
       codiceFiscalePiva
     });
-  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
+  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, zonaGas, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
   useEffect(() => {
     scriviPersistito('simulotto:concorrente', { prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore });
@@ -134,6 +138,7 @@ export function ConcorrenzaClient() {
     tipoConsumo,
     potenzaKw: potenzaKw === '' ? 0 : potenzaKw,
     giorniFattura: giorniFattura === '' ? 0 : giorniFattura,
+    zonaGas,
     percentualeConsumoF2: 20,
     percentualeConsumoF3: 0
   };
@@ -151,7 +156,7 @@ export function ConcorrenzaClient() {
       if (trovata) return trovata;
     }
     return risultati[0];
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
 
   const usaOffertaConfermata = useMemo(() => {
     if (typeof window === 'undefined' || !migliorEnel) return false;
@@ -161,7 +166,7 @@ export function ConcorrenzaClient() {
   const risultatoConcorrente = useMemo(() => {
     if (prezzoKwh === '' || ccv === '' || parametri.length === 0) return null;
     return calcolaConcorrente(Number(prezzoKwh), Number(ccv), input, parametri, fasceRete);
-  }, [prezzoKwh, ccv, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+  }, [prezzoKwh, ccv, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
 
   const deltaPeriodo = useMemo(() => {
     if (!migliorEnel || !risultatoConcorrente) return null;
@@ -194,7 +199,7 @@ export function ConcorrenzaClient() {
         risultato: calcolaConcorrente(c.prezzoKwh as number, c.ccvMensile as number, input, parametri, fasceRete)
       }))
       .sort((a, b) => a.risultato.totaleBolletta - b.risultato.totaleBolletta);
-  }, [concorrentiMercato, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
+  }, [concorrentiMercato, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
 
   const LIMITE_FILE_MB = 4;
   const LIMITE_FILE_TOTALE_MB = 8;
@@ -426,6 +431,22 @@ export function ConcorrenzaClient() {
                     value={potenzaKw}
                     onChange={(e) => setPotenzaKw(e.target.value === '' ? '' : Number(e.target.value))}
                   />
+                </div>
+              )}
+              {commodity === 'GAS' && (
+                <div>
+                  <label className="label">
+                    Zona tariffaria gas
+                    <AiutoCampo testo="Le tariffe di trasporto/distribuzione gas ARERA variano per zona geografica (a differenza della luce). Solo 'Nord Orientale' ha valori verificati da una bolletta reale; le altre zone vanno compilate da Admin → Dati e parametri prima di usarle per un confronto affidabile." />
+                  </label>
+                  <select className="input" value={zonaGas} onChange={(e) => setZonaGas(e.target.value)}>
+                    {ZONE_GAS.map((z) => (
+                      <option key={z} value={z}>
+                        {z}
+                        {z !== ZONA_GAS_DEFAULT ? ' (da verificare)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
               <div>

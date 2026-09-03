@@ -1,5 +1,6 @@
 import { Offerta, ParametroDettaglio, InputSimulazione, RisultatoCalcolo, RigaConfronto, FasciaRete } from './types';
 import { calcolaCostiRete, ACCISA_LUCE_KWH_DEFAULT, TRASMISSIONE_KWH_DEFAULT, MISURA_ANNO_DEFAULT, FASCE_DEFAULT } from './tariffeLuce';
+import { ZONA_GAS_DEFAULT, slugZonaGas } from './zoneGas';
 
 /**
  * Motore di calcolo bolletta, verificato contro 2 bollette reali Enel Flex
@@ -132,11 +133,20 @@ export function calcolaOfferta(
     );
     totaleVociFisse = speseFisseRete + spesePotenza + speseEnergiaRete + accisa;
   } else {
-    // GAS: la formula ARERA per distribuzione/oneri gas non è ancora presente
-    // nel foglio parametri fornito. Uso i parametri di dettaglio manuali
-    // (tab "Parametri di dettaglio" in Admin) come approssimazione, in attesa
-    // di un foglio tariffe gas equivalente a quello luce.
-    const paramGas = parametri.filter((p) => p.commodity === 'GAS' && p.unita !== '%' && !p.chiave.startsWith('ALTRE_VOCI'));
+    // GAS: a differenza della luce, le tariffe di trasporto/distribuzione
+    // ARERA variano per zona geografica (6 ambiti tariffari). I parametri
+    // relativi al trasporto sono quindi salvati per zona (chiave
+    // GAS_TRASPORTO_FISSO_<ZONA> ecc.): qui prendiamo solo quelli della zona
+    // scelta per questo cliente, più le voci nazionali (accisa) che invece
+    // sono uguali ovunque.
+    const zonaSlug = slugZonaGas(input.zonaGas || ZONA_GAS_DEFAULT);
+    const paramGas = parametri.filter((p) => {
+      if (p.commodity !== 'GAS' || p.unita === '%' || p.chiave.startsWith('ALTRE_VOCI')) return false;
+      if (p.chiave.startsWith('GAS_TRASPORTO_') || p.chiave.startsWith('GAS_ONERI_')) {
+        return p.chiave.endsWith(`_${zonaSlug}`);
+      }
+      return true; // es. ACCISA_GAS_SMC: nazionale, sempre incluso
+    });
     for (const p of paramGas) {
       const valoreScalato = p.unita === '€/fattura' ? p.valore * (input.giorniFattura / 30) : p.valore * consumoFatturato;
       const gruppo: RigaConfronto['gruppo'] = p.categoria === 'Accise e IVA' ? 'ACCISE' : 'FISSA_POTENZA';

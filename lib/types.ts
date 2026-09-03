@@ -78,6 +78,10 @@ export interface InputSimulazione {
   tipoConsumo: 'ANNUO' | 'PERIODO';
   potenzaKw: number;
   giorniFattura: number;
+  // Ambito tariffario ARERA del punto di fornitura gas (le tariffe di
+  // distribuzione/trasporto gas, a differenza della luce, variano per zona
+  // geografica). Ignorato per la luce. Vedi lib/zoneGas.ts.
+  zonaGas?: string;
   // Per offerte con più fasce orarie (F2, eventualmente F3): quanta parte
   // del consumo del cliente ricade in ciascuna fascia, 0-100. Il resto va
   // in F1. Scelte manualmente da chi usa il simulatore (stima/chiesto al
