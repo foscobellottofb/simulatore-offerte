@@ -28,7 +28,8 @@ export function AdminClient() {
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
   const [mesiPun, setMesiPun] = useState(18);
   const [mesiPsv, setMesiPsv] = useState(18);
-  const [contiConcorrenti, setContiConcorrenti] = useState({ web: 0, fisso: 20, variabile: 20 });
+  const [contiConcorrenti, setContiConcorrenti] = useState({ web: 0, fisso: 8, variabile: 8 });
+  const [progressoConcorrenti, setProgressoConcorrenti] = useState<string | null>(null);
   const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
@@ -220,27 +221,75 @@ export function AdminClient() {
     }
   }
 
+  const FORNITORI_RICERCA = [
+    'A2A', 'Iren', 'Edison', 'Eni Plenitude', 'Sorgenia', 'Acea', 'Hera Comm',
+    'Engie', 'Illumia', 'Wekiwi', 'Octopus Energy', 'Green Network', 'NeN', 'Dolomiti Energia'
+  ];
+
   async function cercaConcorrentiDalWeb() {
     setSincronizzandoConcorrenti(true);
+    // Budget residuo per categoria: si esaurisce man mano che i fornitori
+    // trovano offerte, così ci si ferma appena raggiunti i totali richiesti
+    // invece di continuare a interrogare fornitori inutilmente.
+    let residuo = { web: contiConcorrenti.web, fisso: contiConcorrenti.fisso, variabile: contiConcorrenti.variabile };
+    let totaleTrovate = 0;
+    const falliti: string[] = [];
+
     try {
-      const res = await fetch('/api/concorrenti/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          webCount: contiConcorrenti.web,
-          fissoCount: contiConcorrenti.fisso,
-          variabileCount: contiConcorrenti.variabile
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error ?? 'Ricerca non riuscita.');
-        return;
+      for (const fornitore of FORNITORI_RICERCA) {
+        if (residuo.web <= 0 && residuo.fisso <= 0 && residuo.variabile <= 0) break;
+
+        setProgressoConcorrenti(`Cerco offerte di ${fornitore}… (${totaleTrovate} trovate finora)`);
+
+        try {
+          const res = await fetch('/api/concorrenti/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fornitore,
+              webCount: residuo.web,
+              fissoCount: residuo.fisso,
+              variabileCount: residuo.variabile
+            })
+          });
+
+          let data: any;
+          try {
+            data = await res.json();
+          } catch {
+            // Timeout/risposta non-JSON per QUESTO fornitore: la chiamata è
+            // piccola, quindi è raro, ma se capita saltiamo al prossimo
+            // invece di interrompere tutto il giro.
+            falliti.push(fornitore);
+            continue;
+          }
+          if (!res.ok) {
+            falliti.push(fornitore);
+            continue;
+          }
+
+          totaleTrovate += data.creati?.length ?? 0;
+          if (data.contatori) {
+            residuo = {
+              web: Math.max(0, residuo.web - (data.contatori.web ?? 0)),
+              fisso: Math.max(0, residuo.fisso - (data.contatori.fisso ?? 0)),
+              variabile: Math.max(0, residuo.variabile - (data.contatori.variabile ?? 0))
+            };
+          }
+        } catch {
+          falliti.push(fornitore);
+        }
       }
-      alert(data.messaggio);
+
+      alert(
+        `Ricerca completata: ${totaleTrovate} offerte complete (prezzo+CCV) trovate e inserite come NON ATTIVE.\n` +
+          `Verificale e attivale da Admin prima che compaiano su /mercato.` +
+          (falliti.length > 0 ? `\n\nFalliti/saltati: ${falliti.join(', ')} (puoi rilanciare la ricerca, i fornitori già coperti restano nel database).` : '')
+      );
       fetch('/api/concorrenti?includiInattive=1').then((r) => r.json()).then(setConcorrenti);
     } finally {
       setSincronizzandoConcorrenti(false);
+      setProgressoConcorrenti(null);
     }
   }
 
@@ -729,14 +778,30 @@ export function AdminClient() {
               Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato" (solo quelle{' '}
               <strong>attive</strong>). Distingui sempre le offerte "solo web" (canale WEB) dalle altre (canale
               ALTRO), perché non sono condizioni replicabili in trattativa diretta.
+              <br />
+              <span className="text-enel-amber">
+                ⚠️ "Cerca dal web" ora lancia una chiamata separata per ciascuno dei {FORNITORI_RICERCA.length}{' '}
+                fornitori, in sequenza (necessario perché il piano Vercel Hobby limita ogni singola chiamata a
+                ~10 secondi) — quindi la ricerca completa richiede qualche minuto invece di pochi secondi. Solo
+                le offerte con SIA prezzo SIA CCV trovati vengono salvate.
+              </span>
             </p>
+            {progressoConcorrenti && (
+              <div className="flex items-center gap-2 rounded-lg border border-enel-navy/30 bg-enel-navy/5 px-3 py-2 mb-3">
+                <span
+                  className="inline-block w-3.5 h-3.5 rounded-full border-2 border-enel-navy/30 border-t-enel-navy animate-spin"
+                  aria-hidden="true"
+                />
+                <span className="text-xs font-medium text-enel-navy">{progressoConcorrenti}</span>
+              </div>
+            )}
             <div className="flex items-end gap-2 shrink-0">
               <div>
                 <label className="text-[10px] text-enel-ink/50 block mb-0.5">Web (0 = nessuna)</label>
                 <input
                   type="number"
                   min={0}
-                  max={50}
+                  max={100}
                   className="input text-xs py-1 px-2 w-16"
                   value={contiConcorrenti.web}
                   onChange={(e) => setContiConcorrenti((c) => ({ ...c, web: Math.max(0, Number(e.target.value) || 0) }))}
@@ -747,7 +812,7 @@ export function AdminClient() {
                 <input
                   type="number"
                   min={0}
-                  max={50}
+                  max={100}
                   className="input text-xs py-1 px-2 w-16"
                   value={contiConcorrenti.fisso}
                   onChange={(e) => setContiConcorrenti((c) => ({ ...c, fisso: Math.max(0, Number(e.target.value) || 0) }))}
@@ -758,7 +823,7 @@ export function AdminClient() {
                 <input
                   type="number"
                   min={0}
-                  max={50}
+                  max={100}
                   className="input text-xs py-1 px-2 w-16"
                   value={contiConcorrenti.variabile}
                   onChange={(e) => setContiConcorrenti((c) => ({ ...c, variabile: Math.max(0, Number(e.target.value) || 0) }))}
