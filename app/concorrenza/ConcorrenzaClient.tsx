@@ -93,6 +93,8 @@ export function ConcorrenzaClient() {
   const [concorrentiMercato, setConcorrentiMercato] = useState<OffertaConcorrente[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [confidenzaOcr, setConfidenzaOcr] = useState<'alta' | 'media' | 'bassa' | null>(null);
+  const [noteStrutturate, setNoteStrutturate] = useState<{ etichetta: string; testo: string }[] | null>(null);
   const [analisiIA, setAnalisiIA] = useState<string | null>(null);
   const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
 
@@ -173,6 +175,19 @@ export function ConcorrenzaClient() {
     return risultatoConcorrente.totaleBolletta - migliorEnel.totaleBolletta;
   }, [migliorEnel, risultatoConcorrente]);
 
+  // Differenza tra quanto calcoliamo noi (prezzo + CCV inseriti) e il totale
+  // che il cliente ha effettivamente pagato: se è alta, in bolletta ci sono
+  // probabilmente altre voci (extra, arretrati, penali...) non riflesse nei
+  // due soli campi "prezzo" e "CCV" che abbiamo inserito qui.
+  const scartoTotaleDichiarato = useMemo(() => {
+    if (!risultatoConcorrente || totaleDichiarato === '') return null;
+    return risultatoConcorrente.totaleBolletta - Number(totaleDichiarato);
+  }, [risultatoConcorrente, totaleDichiarato]);
+
+  const SOGLIA_SCARTO_SIGNIFICATIVO = 2; // €, oltre il quale segnaliamo un possibile disallineamento
+  const scartoSignificativo =
+    scartoTotaleDichiarato !== null && Math.abs(scartoTotaleDichiarato) > SOGLIA_SCARTO_SIGNIFICATIVO;
+
   const risparmioAnnuo = useMemo(() => {
     if (deltaPeriodo === null || !giorniFattura) return null;
     return deltaPeriodo * (365 / giorniFattura);
@@ -243,6 +258,8 @@ export function ConcorrenzaClient() {
 
     setOcrStato('analisi');
     setOcrNote(null);
+    setConfidenzaOcr(null);
+    setNoteStrutturate(null);
 
     try {
       const pagine = await Promise.all(
@@ -305,11 +322,8 @@ export function ConcorrenzaClient() {
       setAnalisiIA(data.analisi ?? null);
       setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
       setOcrStato('ok');
-      if (data.confidenza !== 'alta' || data.note) {
-        setOcrNote(
-          `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
-        );
-      }
+      setConfidenzaOcr(data.confidenza ?? null);
+      setNoteStrutturate(Array.isArray(data.note) && data.note.length > 0 ? data.note : null);
     } catch (err) {
       setOcrStato('errore');
       setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
@@ -507,6 +521,8 @@ export function ConcorrenzaClient() {
                   setCostiExtra([]);
                   setOcrStato('idle');
                   setOcrNote(null);
+                  setConfidenzaOcr(null);
+                  setNoteStrutturate(null);
                 }}
               >
                 Resetta tutti i valori
@@ -576,7 +592,28 @@ export function ConcorrenzaClient() {
                 </span>
               </div>
             )}
-            {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
+            {ocrStato === 'ok' && (confidenzaOcr !== 'alta' || noteStrutturate) && (
+              <div className="rounded-lg border border-enel-amber/30 bg-enel-amber/5 mb-2 overflow-hidden">
+                {confidenzaOcr && confidenzaOcr !== 'alta' && (
+                  <div className="flex justify-between items-center px-3 py-1.5 text-xs border-b border-enel-amber/20">
+                    <span className="text-enel-ink/60">Confidenza lettura</span>
+                    <span className="font-semibold text-enel-amber capitalize">{confidenzaOcr}</span>
+                  </div>
+                )}
+                {noteStrutturate?.map((n, i) => (
+                  <div
+                    key={i}
+                    className={`flex gap-3 px-3 py-1.5 text-xs ${i > 0 ? 'border-t border-enel-amber/20' : ''}`}
+                  >
+                    <span className="text-enel-ink/60 font-medium shrink-0 w-32">{n.etichetta}</span>
+                    <span className="text-enel-ink/80">{n.testo}</span>
+                  </div>
+                ))}
+                <div className="px-3 py-1.5 text-xs text-enel-ink/50 border-t border-enel-amber/20">
+                  Controlla i valori prima di confermare.
+                </div>
+              </div>
+            )}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
 
             {ocrStato === 'ok' && (analisiIA || costiExtra.length > 0) && (
@@ -697,11 +734,34 @@ export function ConcorrenzaClient() {
                     </div>
                   )}
 
-                  {totaleDichiarato !== '' && (
-                    <div className="text-xs text-enel-ink/50 mb-4">
-                      Scarto dal totale dichiarato in bolletta:{' '}
-                      <span className="font-medium">{euro(risultatoConcorrente.totaleBolletta - Number(totaleDichiarato))}</span>{' '}
+                  {totaleDichiarato !== '' && scartoTotaleDichiarato !== null && (
+                    <div className="text-xs text-enel-ink/50 mb-2">
+                      Scarto dal totale dichiarato in bolletta: <span className="font-medium">{euro(scartoTotaleDichiarato)}</span>{' '}
                       — utile per verificare la coerenza dei dati inseriti.
+                    </div>
+                  )}
+
+                  {scartoSignificativo && costiExtra.length > 0 && (
+                    <div className="rounded-lg border border-enel-amber/40 bg-enel-amber/10 p-3 mb-4">
+                      <div className="text-xs font-semibold text-enel-amber mb-1.5">
+                        ⚠️ Altre voci in fattura — spiegano parte dello scarto
+                      </div>
+                      <div className="space-y-1">
+                        {costiExtra.map((c, i) => (
+                          <div key={i} className="flex justify-between items-baseline text-xs">
+                            <span className="text-enel-ink/70">
+                              {c.tipo === 'una_tantum' ? '🕐 Una tantum' : '➕ Ricorrente extra'} — {c.descrizione}
+                            </span>
+                            {c.importo != null && <span className="font-medium">{c.importo.toFixed(2)} €</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {scartoSignificativo && costiExtra.length === 0 && (
+                    <div className="text-xs text-enel-amber mb-4">
+                      ⚠️ Lo scarto dal totale dichiarato è superiore a {SOGLIA_SCARTO_SIGNIFICATIVO}€: in bolletta
+                      potrebbero esserci altre voci non rilevate automaticamente — controlla il documento originale.
                     </div>
                   )}
 

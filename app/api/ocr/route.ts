@@ -33,7 +33,7 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "citta": string | null,
   "codiceFiscalePiva": string | null,
   "confidenza": "alta" | "media" | "bassa",
-  "note": string | null,
+  "note": [{ "etichetta": string, "testo": string }] | null,
   "costiExtra": [
     { "descrizione": string, "importo": number | null, "tipo": "una_tantum" | "ricorrente_extra" }
   ],
@@ -86,6 +86,11 @@ Regole:
   altra cosa un consulente dovrebbe sapere prima di usare questi dati per un confronto. Se non trovi
   nulla di rilevante oltre ai dati base, dillo esplicitamente ("Nessun costo extra rilevato oltre alla
   normale struttura tariffaria.").
+- "note": elenco di punti BREVI e DISTINTI (non un paragrafo unico che mescola più argomenti). Ogni
+  elemento ha una "etichetta" di 2-4 parole (es. "Formula prezzo", "Consumo storico", "Tipo cliente",
+  "Periodo economico") e un "testo" di massimo una frase. Un punto = un argomento: se stai per scrivere
+  "e inoltre" o unire due informazioni diverse con una virgola, dividile in due punti separati invece.
+  Massimo 5 punti. Se non c'è nulla da segnalare oltre ai dati base, usa null (non un array vuoto).
 - Se un valore non è leggibile o non è presente, usa null. Non inventare numeri né dati anagrafici.`;
 
 export async function POST(req: NextRequest) {
