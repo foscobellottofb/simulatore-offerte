@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita } from '@/lib/types';
+import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita, OffertaConcorrente } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
 import { Argomentario } from '@/components/Argomentario';
 import { AiutoCampo } from '@/components/AiutoCampo';
@@ -86,6 +86,7 @@ export function ConcorrenzaClient() {
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
+  const [concorrentiMercato, setConcorrentiMercato] = useState<OffertaConcorrente[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
   const [analisiIA, setAnalisiIA] = useState<string | null>(null);
@@ -116,12 +117,14 @@ export function ConcorrenzaClient() {
       fetch('/api/offerte').then((r) => r.json()),
       fetch('/api/parametri').then((r) => r.json()),
       fetch('/api/argomenti').then((r) => r.json()),
-      fetch('/api/fasce-rete').then((r) => r.json())
-    ]).then(([o, p, a, f]) => {
+      fetch('/api/fasce-rete').then((r) => r.json()),
+      fetch('/api/concorrenti').then((r) => r.json())
+    ]).then(([o, p, a, f, c]) => {
       setOfferte(o);
       setParametri(p);
       setArgomenti(a);
       setFasceRete(f);
+      setConcorrentiMercato(c);
     });
   }, []);
 
@@ -169,6 +172,29 @@ export function ConcorrenzaClient() {
     if (deltaPeriodo === null || !giorniFattura) return null;
     return deltaPeriodo * (365 / giorniFattura);
   }, [deltaPeriodo, giorniFattura]);
+
+  // Righe aggiuntive: simula il consumo di QUESTO cliente con i prezzi dei
+  // competitor censiti in "Mercato dell'energia", escludendo quelli
+  // disponibili solo via canale WEB (spesso promozioni non replicabili
+  // porta a porta). Riusa calcolaConcorrente, la stessa funzione usata sopra
+  // per il concorrente inserito manualmente.
+  const simulazioniMercato = useMemo(() => {
+    if (parametri.length === 0) return [];
+    return concorrentiMercato
+      .filter(
+        (c) =>
+          c.attiva &&
+          c.canale !== 'WEB' &&
+          c.commodity === commodity &&
+          c.prezzoKwh != null &&
+          c.ccvMensile != null
+      )
+      .map((c) => ({
+        concorrente: c,
+        risultato: calcolaConcorrente(c.prezzoKwh as number, c.ccvMensile as number, input, parametri, fasceRete)
+      }))
+      .sort((a, b) => a.risultato.totaleBolletta - b.risultato.totaleBolletta);
+  }, [concorrentiMercato, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
 
   const LIMITE_FILE_MB = 4;
   const LIMITE_FILE_TOTALE_MB = 8;
@@ -245,14 +271,24 @@ export function ConcorrenzaClient() {
         setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
         return;
       }
-      const prezzo = commodity === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
-      if (prezzo) setPrezzoKwh(prezzo);
-      if (data.ccvMensile) setCcv(data.ccvMensile);
-      if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
+      // Usa il commodity RILEVATO dall'OCR (non quello ancora nello state, che
+      // potrebbe essere rimasto sul valore precedente) sia per popolare il
+      // toggle in UI sia per scegliere quale prezzo (luce/gas) leggere.
+      const commodityRilevata = data.commodity === 'GAS' ? 'GAS' : data.commodity === 'LUCE' ? 'LUCE' : commodity;
+      if (data.commodity === 'LUCE' || data.commodity === 'GAS') setCommodity(data.commodity);
+
+      const prezzo = commodityRilevata === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
+      // IMPORTANTE: uso "!= null" (non "if (valore)") perché 0 è un valore
+      // legittimo qui (es. consumo 0 Smc in bolletta) e "if (0)" è falso in
+      // JavaScript: con "if (valore)" un vero 0 letto dalla bolletta veniva
+      // scartato silenziosamente, lasciando nel campo il valore precedente.
+      if (prezzo != null) setPrezzoKwh(prezzo);
+      if (data.ccvMensile != null) setCcv(data.ccvMensile);
+      if (data.totaleBolletta != null) setTotaleDichiarato(data.totaleBolletta);
       if (data.fornitore) setNomeFornitore(data.fornitore);
-      if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
-      if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
-      if (data.giorniFattura) {
+      if (data.consumoKwh != null) setConsumoKwh(data.consumoKwh);
+      if (data.potenzaKw != null) setPotenzaKw(data.potenzaKw);
+      if (data.giorniFattura != null) {
         setGiorniFattura(data.giorniFattura);
         setTipoConsumo('PERIODO');
       }
@@ -414,7 +450,26 @@ export function ConcorrenzaClient() {
               </div>
             </div>
 
-            <div className="font-medium text-sm mb-3 pt-3 border-t border-enel-line">Bolletta concorrente</div>
+            <div className="flex items-center justify-between pt-3 border-t border-enel-line mb-3">
+              <div className="font-medium text-sm">Bolletta concorrente</div>
+              <button
+                type="button"
+                className="text-xs text-enel-ink/60 hover:text-enel-ink underline"
+                onClick={() => {
+                  setPrezzoKwh('');
+                  setCcv('');
+                  setTipoPrezzoConcorrente('FISSO');
+                  setTotaleDichiarato('');
+                  setNomeFornitore('');
+                  setAnalisiIA(null);
+                  setCostiExtra([]);
+                  setOcrStato('idle');
+                  setOcrNote(null);
+                }}
+              >
+                Resetta valori
+              </button>
+            </div>
 
             <label className="label">
               Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)
@@ -623,6 +678,32 @@ export function ConcorrenzaClient() {
               )}
             </div>
           </div>
+
+          {migliorEnel && simulazioniMercato.length > 0 && (
+            <div className="card p-4">
+              <div className="text-sm font-semibold mb-1">📊 Confronto con il mercato (stessi consumi del cliente)</div>
+              <p className="text-xs text-enel-ink/50 mb-3">
+                Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'} e CCV presi da "Mercato dell'energia" (esclusi i canali
+                solo web), applicati ai consumi di {nomeCliente || 'questo cliente'} inseriti qui sopra.
+              </p>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-sm px-2 py-1.5 rounded bg-enel-navy/5 font-medium">
+                  <span>Enel — {migliorEnel.offerta.nome}</span>
+                  <span>{euro(migliorEnel.totaleBolletta)}</span>
+                </div>
+                {simulazioniMercato.map(({ concorrente, risultato }) => (
+                  <div key={concorrente.id} className="flex justify-between items-center text-sm px-2 py-1.5 rounded hover:bg-enel-ink/5">
+                    <span className="text-enel-ink/70">
+                      {concorrente.fornitore} — {concorrente.nomeOfferta}
+                    </span>
+                    <span className={risultato.totaleBolletta < migliorEnel.totaleBolletta ? 'text-enel-amber font-medium' : ''}>
+                      {euro(risultato.totaleBolletta)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {migliorEnel && risultatoConcorrente && (
             <Argomentario

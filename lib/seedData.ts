@@ -197,7 +197,25 @@ export const PARAMETRI_SEED: Prisma.ParametroDettaglioCreateManyInput[] = [
   { chiave: 'MISURA_LUCE_ANNO', etichetta: 'Tariffa misura', categoria: 'Rete e oneri (comuni a tutte le fasce)', commodity: Commodity.LUCE, valore: 19.6826, unita: '€/POD/anno', ordinamento: 2 },
   { chiave: 'ACCISA_GAS_SMC', etichetta: 'Accisa gas', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 0, unita: '€/Smc', ordinamento: 1 },
   { chiave: 'IVA_PERC_GAS', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 22, unita: '%', ordinamento: 2 },
-  { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 }
+  { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 },
+  {
+    chiave: 'QUOTA_FISSA_TRASPORTO_GAS',
+    etichetta: 'Quota fissa trasporto',
+    categoria: 'Trasporto e oneri di sistema',
+    commodity: Commodity.GAS,
+    valore: 40.6125,
+    unita: '€/fattura',
+    ordinamento: 4
+  },
+  {
+    chiave: 'QUOTA_FISSA_ONERI_GAS',
+    etichetta: 'Quota fissa oneri di sistema',
+    categoria: 'Trasporto e oneri di sistema',
+    commodity: Commodity.GAS,
+    valore: -1.8025,
+    unita: '€/fattura',
+    ordinamento: 5
+  }
 ];
 
 /**

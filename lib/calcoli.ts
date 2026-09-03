@@ -138,7 +138,7 @@ export function calcolaOfferta(
     // di un foglio tariffe gas equivalente a quello luce.
     const paramGas = parametri.filter((p) => p.commodity === 'GAS' && p.unita !== '%' && !p.chiave.startsWith('ALTRE_VOCI'));
     for (const p of paramGas) {
-      const valoreScalato = p.unita === '€/fattura' ? p.valore * (input.giorniFattura / 60) : p.valore * consumoFatturato;
+      const valoreScalato = p.unita === '€/fattura' ? p.valore * (input.giorniFattura / 30) : p.valore * consumoFatturato;
       const gruppo: RigaConfronto['gruppo'] = p.categoria === 'Accise e IVA' ? 'ACCISE' : 'FISSA_POTENZA';
       righeDettaglio.push({ categoria: p.categoria, etichetta: p.etichetta, valore: valoreScalato, gruppo });
       totaleVociFisse += valoreScalato;

@@ -18,6 +18,7 @@ unico documento, non come bollette separate.
 Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 
 {
+  "commodity": "LUCE" | "GAS" | null,
   "prezzoKwhLuce": number | null,
   "prezzoKwhGas": number | null,
   "ccvMensile": number | null,
@@ -40,6 +41,9 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
 }
 
 Regole:
+- "commodity": "LUCE" se la bolletta è di energia elettrica, "GAS" se è di gas naturale. Deducilo dal tipo
+  di documento (es. presenza di kWh/POD per luce, Smc/PDR per gas). Se il documento contiene entrambe le
+  commodity (bolletta dual fuel), usa quella prevalente/principale e spiegalo in "note".
 - "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della SOLA materia energia in €/kWh (o €/Smc per
   il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
   orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo e
