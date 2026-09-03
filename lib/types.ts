@@ -72,6 +72,15 @@ export interface ArgomentoVendita {
   ordinamento: number;
 }
 
+// Direttiva di contenuto per "Caracozzo AI" (generatore script di vendita),
+// editabile da Admin senza toccare il codice.
+export interface DirettivaScript {
+  id: string;
+  testo: string;
+  attiva: boolean;
+  ordinamento: number;
+}
+
 export interface InputSimulazione {
   commodity: Commodity;
   consumoKwh: number; // valore inserito dall'utente: annuale oppure del periodo, secondo tipoConsumo

@@ -356,11 +356,17 @@ export function ConcorrenzaClient() {
         body: JSON.stringify({
           nomeCliente,
           commodity,
+          zonaGas: commodity === 'GAS' ? zonaGas : undefined,
+          citta,
+          consumoKwh: consumoKwh === '' ? undefined : consumoKwh,
+          giorniFattura: giorniFattura === '' ? undefined : giorniFattura,
           offertaNome: migliorEnel.offerta.nome,
           fornitoreConcorrente: nomeFornitore,
+          tipoPrezzoConcorrente,
           totaleEnel: migliorEnel.totaleBolletta,
           totaleConcorrente: risultatoConcorrente.totaleBolletta,
           risparmioAnnuo,
+          costiExtraRilevati: costiExtra.length > 0 ? costiExtra.map((c) => c.descrizione).join('; ') : undefined,
           nomeConsulente
         })
       });

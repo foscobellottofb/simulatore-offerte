@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente, DirettivaScript } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -15,6 +15,7 @@ export function AdminClient() {
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
+  const [direttive, setDirettive] = useState<DirettivaScript[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [pun, setPun] = useState<PunMensile[]>([]);
   const [psv, setPsv] = useState<PsvMensile[]>([]);
@@ -30,7 +31,7 @@ export function AdminClient() {
   const [mesiPsv, setMesiPsv] = useState(18);
   const [contiConcorrenti, setContiConcorrenti] = useState({ web: 0, fisso: 8, variabile: 8 });
   const [progressoConcorrenti, setProgressoConcorrenti] = useState<string | null>(null);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario' | 'caracozzo'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -38,6 +39,7 @@ export function AdminClient() {
   }
   function ricaricaArgomenti() {
     fetch('/api/argomenti').then((r) => r.json()).then(setArgomenti);
+    fetch('/api/direttive').then((r) => r.json()).then(setDirettive);
   }
 
   useEffect(() => {
@@ -445,6 +447,45 @@ export function AdminClient() {
     setArgomenti((prev) => [...prev, nuovo]);
   }
 
+  function aggiornaTestoDirettiva(id: string, testo: string) {
+    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, testo } : d)));
+  }
+
+  async function salvaTestoDirettiva(id: string) {
+    const d = direttive.find((x) => x.id === id);
+    if (!d) return;
+    await fetch(`/api/direttive/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testo: d.testo })
+    });
+  }
+
+  async function toggleAttivaDirettiva(id: string, attiva: boolean) {
+    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, attiva } : d)));
+    await fetch(`/api/direttive/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attiva })
+    });
+  }
+
+  async function eliminaDirettiva(id: string) {
+    if (!confirm('Eliminare questa direttiva?')) return;
+    await fetch(`/api/direttive/${id}`, { method: 'DELETE' });
+    setDirettive((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  async function aggiungiDirettiva() {
+    const res = await fetch('/api/direttive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testo: 'Nuova direttiva — modifica questo testo', ordinamento: direttive.length + 1 })
+    });
+    const nuova = await res.json();
+    setDirettive((prev) => [...prev, nuova]);
+  }
+
   const categorie = Array.from(new Set(parametri.map((p) => p.categoria)));
   const tipiArgomento: TipoArgomento[] = ['ENEL_VINCE', 'CONCORRENTE_VARIABILE', 'CONCORRENTE_FISSO', 'GENERALE'];
 
@@ -491,6 +532,12 @@ export function AdminClient() {
           onClick={() => setTab('argomentario')}
         >
           Argomentario ({argomenti.length})
+        </button>
+        <button
+          className={tab === 'caracozzo' ? 'btn-primary text-xs' : 'btn-secondary text-xs'}
+          onClick={() => setTab('caracozzo')}
+        >
+          Caracozzo AI ({direttive.length})
         </button>
         {tab === 'offerte' && (
           <button className="btn-primary text-xs ml-auto" onClick={() => setFormAperto('nuova')}>
@@ -589,8 +636,8 @@ export function AdminClient() {
 
       {tab === 'rete' && (
         <div className="card p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
               Componenti ARERA di distribuzione e oneri di sistema (ASOS/ARIM), una riga per fascia di potenza. Gli
               oneri ASOS/ARIM cambiano ogni trimestre con delibera ARERA: aggiornali qui, senza toccare il codice.
               Trasmissione, misura e accisa (comuni a tutte le fasce) sono invece nella tab "Parametri di dettaglio".
@@ -670,8 +717,8 @@ export function AdminClient() {
 
       {tab === 'pun' && (
         <div className="card p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
               Valore medio mensile del PUN Index GME (€/MWh), usato nel grafico della pagina pubblica "/mercato".
               Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
               successivo), o correggi valori stimati con quelli ufficiali.
@@ -740,8 +787,8 @@ export function AdminClient() {
 
       {tab === 'psv' && (
         <div className="card p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
               Valore medio mensile dell'indice PSV gas (€/Smc), l'equivalente del PUN per il gas, usato nel grafico
               della pagina pubblica "/mercato". Aggiorna qui il mese corrente appena disponibile, o correggi valori
               stimati con quelli ufficiali.
@@ -810,8 +857,8 @@ export function AdminClient() {
 
       {tab === 'concorrenza' && (
         <div className="card p-5">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
               Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato" (solo quelle{' '}
               <strong>attive</strong>). Distingui sempre le offerte "solo web" (canale WEB) dalle altre (canale
               ALTRO), perché non sono condizioni replicabili in trattativa diretta.
@@ -1095,6 +1142,57 @@ export function AdminClient() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'caracozzo' && (
+        <div className="space-y-4">
+          <div className="card p-5">
+            <div className="text-sm font-semibold mb-1">✍️ Direttive per Caracozzo AI</div>
+            <p className="text-xs text-enel-ink/50 mb-4">
+              Cosa deve toccare ogni script di vendita generato nella pagina "Confronto concorrenza" (il pulsante
+              "Genera script"). Ogni direttiva è una frase in italiano semplice: l'IA le incorpora nel discorso
+              naturale, senza elencarle come una lista. Ordine, tono e lunghezza restano gestiti automaticamente —
+              qui controlli solo i CONTENUTI che lo script deve toccare. Esempi di direttive che puoi aggiungere:
+              "Se il prezzo Enel è più alto di quello attuale del cliente, invita comunque a restare in contatto:
+              lo avviserai appena ci sarà un'offerta più conveniente", oppure "Proponiti sempre come punto di
+              riferimento anche per l'altra commodity (luce/gas) se il cliente non ce l'ha già con noi".
+            </p>
+            <div className="space-y-3">
+              {direttive
+                .slice()
+                .sort((a, b) => a.ordinamento - b.ordinamento)
+                .map((d) => (
+                  <div key={d.id} className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={d.attiva}
+                      onChange={(e) => toggleAttivaDirettiva(d.id, e.target.checked)}
+                      className="mt-2"
+                      title="Attiva"
+                    />
+                    <textarea
+                      className={`input flex-1 ${!d.attiva ? 'opacity-40' : ''}`}
+                      rows={2}
+                      value={d.testo}
+                      onChange={(e) => aggiornaTestoDirettiva(d.id, e.target.value)}
+                      onBlur={() => salvaTestoDirettiva(d.id)}
+                    />
+                    <button className="text-xs text-red-600 hover:underline mt-2" onClick={() => eliminaDirettiva(d.id)}>
+                      Elimina
+                    </button>
+                  </div>
+                ))}
+              {direttive.length === 0 && (
+                <div className="text-xs text-enel-ink/40">
+                  Nessuna direttiva configurata: lo script userà un tono generico basato solo sui dati numerici.
+                </div>
+              )}
+            </div>
+            <button className="btn-secondary text-xs mt-3" onClick={aggiungiDirettiva}>
+              + Aggiungi direttiva
+            </button>
+          </div>
         </div>
       )}
 

@@ -1,33 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { prisma } from '@/lib/db';
 
 // Richiede ANTHROPIC_API_KEY (stessa usata per OCR e sincronizzazione PUN).
 const anthropic = new Anthropic();
 
-const SYSTEM_PROMPT = `Sei un copywriter che scrive script di vendita brevi per consulenti Enel Business,
+// Regole STRUTTURALI, fisse (formato/tono/lunghezza): non sono "cosa dire"
+// ma "come dirlo", quindi restano nel codice invece che tra le direttive
+// editabili da Admin (quelle sono per il CONTENUTO, vedi sotto).
+const REGOLE_STRUTTURALI = `Sei un copywriter che scrive script di vendita brevi per consulenti Enel Business,
 da usare a voce con un cliente dopo aver confrontato l'offerta Enel con quella attuale del cliente.
 
 Scrivi un discorso naturale (non un elenco puntato, non un'email), in italiano colloquiale ma
 professionale — un paragrafo di 80-150 parole che il consulente può leggere quasi alla lettera o
 adattare al momento.
 
-Deve toccare questi punti, incorporati nel discorso naturale, non elencati:
-1. Il risparmio concreto stimato, se fornito nei dati.
-2. OBBLIGATORIO, non ometterlo mai in nessuna generazione: che da oggi il cliente ha un consulente
-   dedicato — parla in prima persona come il consulente stesso. Non è solo chi vende questa offerta
-   una tantum, ma chi seguirà le sue forniture nel tempo, proponendo sempre la soluzione più adatta in
-   base ai consumi reali, disponibile quando serve. Anche se varii tutto il resto dello script, questo
-   punto ci deve sempre essere, in qualche forma.
-3. Un accenno naturale alla solidità del marchio Enel (grande gruppo affermato, presenza consolidata,
-   assistenza affidabile) — breve, non una lista di caratteristiche tecniche.
-4. Una chiusura che invita naturalmente a procedere.
-
 Varietà: ogni volta che generi uno script, anche con dati di contesto simili, deve suonare diverso
 dalle volte precedenti — cambia la frase di apertura, l'ordine in cui presenti i concetti, le parole
 usate per esprimere ciascun punto, il ritmo delle frasi. Non ripetere sempre la stessa struttura o le
 stesse espressioni fisse (es. non aprire sempre con "Le volevo parlare di..." o chiudere sempre allo
 stesso modo): il consulente lo userà più volte con clienti diversi e non deve sembrare un copione
-riciclato. I quattro punti sopra restano fissi nel contenuto, ma il modo di dirli deve variare.
+riciclato.
 
 Regole:
 - Non inventare numeri non forniti nei dati.
@@ -57,19 +50,51 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
+  // Direttive di CONTENUTO, editabili da Admin → "Caracozzo AI": cosa deve
+  // toccare lo script (es. "presentati come consulente dedicato"), non come
+  // scriverlo (quello resta fisso in REGOLE_STRUTTURALI sopra).
+  const direttiveAttive = await prisma.direttivaScript.findMany({
+    where: { attiva: true },
+    orderBy: { ordinamento: 'asc' }
+  });
+
+  const sezioneDirettive =
+    direttiveAttive.length > 0
+      ? `Deve toccare questi punti, incorporati nel discorso naturale, non elencati come una lista:\n` +
+        direttiveAttive.map((d, i) => `${i + 1}. ${d.testo}`).join('\n')
+      : 'Non ci sono direttive di contenuto specifiche configurate: scrivi uno script di vendita generico, professionale e naturale, basandoti sui dati forniti sotto.';
+
   const registro = REGISTRI[Math.floor(Math.random() * REGISTRI.length)];
 
-  const contesto = `Dati per lo script:
-- Cliente: ${body.nomeCliente || 'non specificato'}
-- Commodity: ${body.commodity === 'GAS' ? 'gas' : 'energia elettrica'}
-- Offerta Enel proposta: ${body.offertaNome || 'non specificata'}
-- Fornitore attuale del cliente: ${body.fornitoreConcorrente || 'non specificato'}
-- Totale Enel nel periodo: ${body.totaleEnel != null ? body.totaleEnel.toFixed(2) + ' €' : 'non disponibile'}
-- Totale concorrente nel periodo: ${body.totaleConcorrente != null ? body.totaleConcorrente.toFixed(2) + ' €' : 'non disponibile'}
-- Risparmio annuo stimato: ${body.risparmioAnnuo != null ? body.risparmioAnnuo.toFixed(2) + ' €' : 'non disponibile/non conveniente'}
-- Nome del consulente (che parla in prima persona): ${body.nomeConsulente || 'il tuo consulente Enel'}
+  // Contesto: tutti i dati disponibili della pagina "Confronto concorrenza"
+  // che possono aiutare l'IA a scrivere uno script più mirato — non solo i
+  // pochi campi minimi di prima, così può usarli se rilevanti (es. zona,
+  // indirizzo, dati del profilo di consumo, eventuali costi extra rilevati).
+  const righeContesto = [
+    `Cliente: ${body.nomeCliente || 'non specificato'}`,
+    `Commodity: ${body.commodity === 'GAS' ? 'gas' : 'energia elettrica'}`,
+    body.zonaGas ? `Zona tariffaria gas: ${body.zonaGas}` : null,
+    body.citta ? `Città fornitura: ${body.citta}` : null,
+    body.consumoKwh != null ? `Consumo: ${body.consumoKwh} ${body.commodity === 'GAS' ? 'Smc' : 'kWh'}` : null,
+    body.giorniFattura != null ? `Periodo: ${body.giorniFattura} giorni` : null,
+    `Offerta Enel proposta: ${body.offertaNome || 'non specificata'}`,
+    `Fornitore attuale del cliente: ${body.fornitoreConcorrente || 'non specificato'}`,
+    body.tipoPrezzoConcorrente ? `Tipo prezzo concorrente: ${body.tipoPrezzoConcorrente === 'VARIABILE' ? 'variabile' : 'fisso'}` : null,
+    `Totale Enel nel periodo: ${body.totaleEnel != null ? body.totaleEnel.toFixed(2) + ' €' : 'non disponibile'}`,
+    `Totale concorrente nel periodo: ${body.totaleConcorrente != null ? body.totaleConcorrente.toFixed(2) + ' €' : 'non disponibile'}`,
+    `Risparmio annuo stimato: ${body.risparmioAnnuo != null ? body.risparmioAnnuo.toFixed(2) + ' €' : 'non disponibile/non conveniente'}`,
+    body.risparmioAnnuo != null && body.risparmioAnnuo < 0
+      ? 'ATTENZIONE: in questo caso Enel NON è la soluzione più economica per questo cliente — tienine conto nello script, seguendo le direttive sopra su come gestire questo scenario.'
+      : null,
+    body.costiExtraRilevati ? `Costi extra rilevati in bolletta concorrente: ${body.costiExtraRilevati}` : null,
+    `Nome del consulente (che parla in prima persona): ${body.nomeConsulente || 'il tuo consulente Enel'}`
+  ]
+    .filter(Boolean)
+    .join('\n- ');
 
-Per questa generazione, usa un registro comunicativo ${registro}.`;
+  const contesto = `Dati per lo script:\n- ${righeContesto}\n\nPer questa generazione, usa un registro comunicativo ${registro}.`;
+
+  const systemPrompt = `${REGOLE_STRUTTURALI}\n\n${sezioneDirettive}`;
 
   let message;
   try {
@@ -77,7 +102,7 @@ Per questa generazione, usa un registro comunicativo ${registro}.`;
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
       temperature: 1,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: 'user', content: contesto }]
     });
   } catch (err: any) {

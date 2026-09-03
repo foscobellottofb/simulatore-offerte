@@ -317,6 +317,35 @@ export const ARGOMENTI_SEED: Prisma.ArgomentoVenditaCreateManyInput[] = [
 ];
 
 /**
+ * Direttive di contenuto per "Caracozzo AI" (generatore script di vendita),
+ * editabili da Admin senza toccare il codice. Queste 4 sono esattamente
+ * quelle che il prompt seguiva già in modo fisso (hardcoded) prima di
+ * diventare configurabili: partendo da qui puoi modificarle, disattivarle o
+ * aggiungerne altre (es. "se il prezzo Enel è più alto, invita comunque il
+ * cliente a restare in contatto per future offerte migliori").
+ */
+export const DIRETTIVE_SCRIPT_SEED: Prisma.DirettivaScriptCreateManyInput[] = [
+  {
+    testo: 'Se fornito nei dati, menziona il risparmio concreto stimato per il cliente.',
+    ordinamento: 1
+  },
+  {
+    testo:
+      "Fondamentale in ogni script: presentati come il consulente dedicato del cliente da oggi in poi, non solo chi vende questa offerta una tantum. Chi seguirà le sue forniture nel tempo, proponendo la soluzione più adatta in base ai consumi reali, disponibile quando serve.",
+    ordinamento: 2
+  },
+  {
+    testo:
+      'Un accenno naturale e breve alla solidità del marchio Enel (grande gruppo affermato, presenza consolidata, assistenza affidabile) — non una lista di caratteristiche tecniche.',
+    ordinamento: 3
+  },
+  {
+    testo: 'Chiudi lo script con un invito naturale a procedere.',
+    ordinamento: 4
+  }
+];
+
+/**
  * Valori medi mensili del PUN Index GME (€/MWh), per il grafico multi-anno
  * della pagina pubblica "/mercato".
  *

@@ -120,6 +120,20 @@ model ArgomentoVendita {
   updatedAt   DateTime      @updatedAt
 }
 
+// Direttive personalizzabili per "Caracozzo AI" (generatore script di vendita),
+// oltre a quelle strutturali fisse nel prompt (lunghezza, tono, niente
+// markdown). Qui vanno le direttive di CONTENUTO che l'utente vuole poter
+// cambiare senza toccare il codice — es. "proponiti sempre come consulente",
+// "se il prezzo Enel è più alto, invita comunque a restare in contatto per
+// nuove offerte". Editabili da Admin → "Caracozzo AI".
+model DirettivaScript {
+  id          String   @id @default(cuid())
+  testo       String
+  attiva      Boolean  @default(true)
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
 model Simulazione {
   id                String   @id @default(cuid())
   nomeCliente       String?
