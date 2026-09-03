@@ -26,6 +26,9 @@ export function AdminClient() {
   const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
   const [sincronizzandoPsv, setSincronizzandoPsv] = useState(false);
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
+  const [mesiPun, setMesiPun] = useState(18);
+  const [mesiPsv, setMesiPsv] = useState(18);
+  const [contiConcorrenti, setContiConcorrenti] = useState({ web: 0, fisso: 20, variabile: 20 });
   const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
@@ -140,7 +143,11 @@ export function AdminClient() {
   async function sincronizzaPunDalWeb() {
     setSincronizzandoPun(true);
     try {
-      const res = await fetch('/api/pun/sync', { method: 'POST' });
+      const res = await fetch('/api/pun/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mesi: mesiPun })
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -196,7 +203,11 @@ export function AdminClient() {
   async function sincronizzaPsvDalWeb() {
     setSincronizzandoPsv(true);
     try {
-      const res = await fetch('/api/psv/sync', { method: 'POST' });
+      const res = await fetch('/api/psv/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mesi: mesiPsv })
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -212,7 +223,15 @@ export function AdminClient() {
   async function cercaConcorrentiDalWeb() {
     setSincronizzandoConcorrenti(true);
     try {
-      const res = await fetch('/api/concorrenti/sync', { method: 'POST' });
+      const res = await fetch('/api/concorrenti/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          webCount: contiConcorrenti.web,
+          fissoCount: contiConcorrenti.fisso,
+          variabileCount: contiConcorrenti.variabile
+        })
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Ricerca non riuscita.');
@@ -571,7 +590,18 @@ export function AdminClient() {
               Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
               successivo), o correggi valori stimati con quelli ufficiali.
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-end gap-2 shrink-0">
+              <div>
+                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Mesi da cercare</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={36}
+                  className="input text-xs py-1 px-2 w-16"
+                  value={mesiPun}
+                  onChange={(e) => setMesiPun(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </div>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPunDalWeb} disabled={sincronizzandoPun}>
                 {sincronizzandoPun ? 'Cerco…' : '🔎 Sincronizza da web'}
               </button>
@@ -630,7 +660,18 @@ export function AdminClient() {
               della pagina pubblica "/mercato". Aggiorna qui il mese corrente appena disponibile, o correggi valori
               stimati con quelli ufficiali.
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-end gap-2 shrink-0">
+              <div>
+                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Mesi da cercare</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={36}
+                  className="input text-xs py-1 px-2 w-16"
+                  value={mesiPsv}
+                  onChange={(e) => setMesiPsv(Math.max(1, Number(e.target.value) || 1))}
+                />
+              </div>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPsvDalWeb} disabled={sincronizzandoPsv}>
                 {sincronizzandoPsv ? 'Cerco…' : '🔎 Sincronizza da web'}
               </button>
@@ -689,7 +730,40 @@ export function AdminClient() {
               <strong>attive</strong>). Distingui sempre le offerte "solo web" (canale WEB) dalle altre (canale
               ALTRO), perché non sono condizioni replicabili in trattativa diretta.
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-end gap-2 shrink-0">
+              <div>
+                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Web (0 = nessuna)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  className="input text-xs py-1 px-2 w-16"
+                  value={contiConcorrenti.web}
+                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, web: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Prezzo fisso</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  className="input text-xs py-1 px-2 w-16"
+                  value={contiConcorrenti.fisso}
+                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, fisso: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Prezzo variabile</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={50}
+                  className="input text-xs py-1 px-2 w-16"
+                  value={contiConcorrenti.variabile}
+                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, variabile: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+              </div>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={cercaConcorrentiDalWeb} disabled={sincronizzandoConcorrenti}>
                 {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web'}
               </button>

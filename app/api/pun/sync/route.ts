@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/db';
 import { estraiJson } from '@/lib/estraiJson';
@@ -8,11 +8,12 @@ import { estraiJson } from '@/lib/estraiJson';
 // perché ogni chiamata consuma credito dell'account Anthropic.
 const anthropic = new Anthropic();
 
-const SYSTEM_PROMPT = `Sei un ricercatore che consulta il web per trovare il valore ufficiale del
+function buildSystemPrompt(mesi: number) {
+  return `Sei un ricercatore che consulta il web per trovare il valore ufficiale del
 PUN Index GME (indice del Gestore dei Mercati Energetici italiano, mercato elettrico all'ingrosso).
 
 Cerca sul web i valori medi mensili del PUN Index GME (in €/MWh) per TUTTI i mesi completi degli
-ultimi 18-24 mesi rispetto a oggi per cui riesci a trovare un dato affidabile — non fermarti ai primi
+ultimi ${mesi} mesi rispetto a oggi per cui riesci a trovare un dato affidabile — non fermarti ai primi
 2-3 mesi: cerca specificamente tabelle o articoli che riportino serie storiche di più mesi consecutivi
 (spesso un singolo articolo ne elenca 10-15 insieme), non solo il dato dell'ultimo mese. Dai priorità
 a mercatoelettrico.org come fonte primaria e, se non disponibile, a fonti secondarie affidabili
@@ -33,8 +34,9 @@ Regole:
   sono discordanti.
 - Non includere il mese corrente se non ancora concluso (il PUN mensile si calcola solo a mese finito).
 - Se non trovi un dato affidabile per un mese, ometti quel mese piuttosto che inventarlo.`;
+}
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
@@ -42,11 +44,14 @@ export async function POST() {
     );
   }
 
+  const body = await req.json().catch(() => ({}));
+  const mesi = Math.min(36, Math.max(1, Number(body?.mesi) || 18));
+
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8000,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: 'Trova i valori PUN mensili più recenti disponibili.' }],
+    system: buildSystemPrompt(mesi),
+    messages: [{ role: 'user', content: `Trova i valori PUN mensili degli ultimi ${mesi} mesi disponibili.` }],
     // Cast a "any": alcune versioni dell'SDK non hanno ancora i tipi TS per
     // questo strumento, ma l'API lo accetta comunque (è solo JSON inoltrato).
     tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
