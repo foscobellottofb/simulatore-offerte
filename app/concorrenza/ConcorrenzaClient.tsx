@@ -790,9 +790,12 @@ export function ConcorrenzaClient() {
           {migliorEnel && simulazioniMercato.length > 0 && (
             <div className="card p-4">
               <div className="text-sm font-semibold mb-1">📊 Confronto con il mercato (stessi consumi del cliente)</div>
-              <p className="text-xs text-enel-ink/50 mb-3">
+              <p className="text-xs text-enel-ink/50 mb-2">
                 Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'} e CCV presi da "Mercato dell'energia" (esclusi i canali
-                solo web), applicati ai consumi di {nomeCliente || 'questo cliente'} inseriti qui sopra.
+                solo web), applicati ai consumi di {nomeCliente || 'questo cliente'} inseriti qui sopra. Per le
+                offerte a prezzo <strong>variabile</strong>, il valore censito deve essere il prezzo PIENO stimato
+                al momento del censimento (spread + indice all'ingrosso già sommati a mano) — verifica in Admin →
+                Concorrenza che sia aggiornato, dato che il mercato si muove nel tempo.
               </p>
               <div className="space-y-1">
                 <div className="flex justify-between items-center text-sm px-2 py-1.5 rounded bg-enel-navy/5 font-medium">
@@ -803,6 +806,9 @@ export function ConcorrenzaClient() {
                   <div key={concorrente.id} className="flex justify-between items-center text-sm px-2 py-1.5 rounded hover:bg-enel-ink/5">
                     <span className="text-enel-ink/70">
                       {concorrente.fornitore} — {concorrente.nomeOfferta}
+                      <span className="text-[10px] text-enel-ink/40 ml-1">
+                        ({concorrente.tipoPrezzo === 'VARIABILE' ? 'variabile' : 'fisso'})
+                      </span>
                     </span>
                     <span className={risultato.totaleBolletta < migliorEnel.totaleBolletta ? 'text-enel-amber font-medium' : ''}>
                       {euro(risultato.totaleBolletta)}

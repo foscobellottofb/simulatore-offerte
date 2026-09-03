@@ -194,6 +194,16 @@ export function calcolaTutteLeOfferte(
  * Calcolo del "totale concorrente" a partire dai due soli dati che l'utente
  * inserisce (prezzo kWh e CCV): tutte le altre voci (rete, oneri, accisa,
  * IVA...) restano quelle regolate uguali per tutti i fornitori.
+ *
+ * SCELTA DELIBERATA per le offerte a prezzo VARIABILE: "prezzoKwh" va
+ * inserito come prezzo PIENO stimato di oggi (spread + indice PUN/PSV),
+ * non come solo spread. Non sommiamo automaticamente un indice PUN/PSV
+ * live: farlo introdurrebbe una dipendenza da dati che vanno mantenuti
+ * aggiornati a parte (PUN/PSV in Admin), col rischio concreto che restino
+ * vecchi senza che nessuno se ne accorga — un errore silenzioso peggiore
+ * di dover semplicemente riscrivere il numero ogni tanto a mano. Chi
+ * inserisce il prezzo di un'offerta variabile deve quindi aggiornarlo
+ * periodicamente lui stesso quando il mercato si muove.
  */
 export function calcolaConcorrente(
   prezzoKwh: number,
@@ -206,7 +216,7 @@ export function calcolaConcorrente(
     id: 'concorrente',
     nome: 'Offerta concorrente',
     commodity: input.commodity,
-    tipoPrezzo: 'FISSO',
+    tipoPrezzo: 'FISSO', // il motore riceve sempre il prezzo pieno così com'è inserito
     potenzaMinKw: null,
     potenzaMaxKw: null,
     prezzoFisso: prezzoKwh,

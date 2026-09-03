@@ -101,7 +101,11 @@ Regole:
 - "canale": "WEB" se l'offerta è attivabile solo online/autonomamente (spesso con sconto legato
   proprio a questo); "ALTRO" se è un'offerta standard vendibile anche a voce/agenzia.
 - "prezzoKwh": prezzo unitario in €/kWh (luce) o €/Smc (gas) della sola componente energia, non il
-  totale bolletta. Se l'offerta è variabile, indica lo spread sopra l'indice se esplicitato.
+  totale bolletta. Se l'offerta è a prezzo variabile legato a un indice (es. "PUN + Spread" o "PSV +
+  Spread"), NON riportare solo lo spread: stima il prezzo PIENO attuale sommando l'indice di mercato più
+  recente che conosci allo spread dichiarato, e spiega la stima (indice usato, periodo) in "note". Se non
+  hai un valore recente affidabile per l'indice, usa null piuttosto che riportare solo lo spread (che da
+  solo sottostimerebbe pesantemente il costo reale per il cliente).
 - "note": specifica sempre la data/periodo a cui si riferisce il prezzo trovato, il profilo di
   consumo usato per la ricerca se dal Portale Offerte, e qualunque condizione rilevante (durata
   minima, sconti condizionati, ecc.).
