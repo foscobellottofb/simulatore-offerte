@@ -47,8 +47,18 @@ Regole:
 - "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della SOLA materia energia in €/kWh (o €/Smc per
   il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
   orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo e
-  spiegalo in "note".
-- "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
+  spiegalo in "note". Se l'offerta è a prezzo variabile legato a un indice (es. "PSV + Spread") SENZA che
+  la bolletta indichi un valore numerico fisso applicato, e/o il consumo del periodo è 0 (quindi non è
+  calcolabile nemmeno indirettamente dall'importo fatturato), usa null e spiegalo chiaramente in "note"
+  (es. "prezzo non determinabile: formula a indice variabile, nessun consumo nel periodo per ricavarlo
+  indirettamente").
+- "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente. ATTENZIONE:
+  in molte bollette gas compaiono DUE voci diverse chiamate entrambe "quota fissa": una nella sezione
+  "vendita/materia prima" (spesso etichettata QVD, CCV, o "quota fissa di vendita" — QUESTA è ccvMensile) e
+  una nella sezione "trasporto/distribuzione/rete" (spesso "quota fissa trasporto" o "quota fissa di
+  distribuzione" — questa NON è ccvMensile, non includerla). Se vedi più righe "quota fissa", prendi solo
+  quella dentro la sezione di vendita/offerta commerciale (di solito la più piccola delle due, e vicina al
+  nome dell'offerta/fornitore), mai quella di trasporto/rete/distribuzione.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
 - "consumoKwh": il consumo del periodo fatturato in kWh (elettricità) o Smc (gas) — quello effettivamente
   fatturato in questa bolletta, non un consumo annuo stimato. Se ci sono più fasce (F1/F2/F3), usa il
