@@ -72,6 +72,14 @@ export interface ArgomentoVendita {
   ordinamento: number;
 }
 
+// Istruzione personalizzata per Caracozzo AI, configurabile da Admin.
+export interface DirettivaScript {
+  id: string;
+  testo: string;
+  attiva: boolean;
+  ordinamento: number;
+}
+
 export interface InputSimulazione {
   commodity: Commodity;
   consumoKwh: number; // valore inserito dall'utente: annuale oppure del periodo, secondo tipoConsumo

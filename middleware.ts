@@ -16,6 +16,7 @@ const PREFIX_SCRITTURA_PROTETTA = [
   '/api/parametri',
   '/api/fasce-rete',
   '/api/argomenti',
+  '/api/direttive',
   '/api/pun',
   '/api/psv',
   '/api/concorrenti'
@@ -53,6 +54,7 @@ export const config = {
     '/api/parametri/:path*',
     '/api/fasce-rete/:path*',
     '/api/argomenti/:path*',
+    '/api/direttive/:path*',
     '/api/pun/:path*',
     '/api/psv/:path*',
     '/api/concorrenti/:path*'

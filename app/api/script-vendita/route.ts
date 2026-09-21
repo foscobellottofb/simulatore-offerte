@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { prisma } from '@/lib/db';
 
 // Richiede ANTHROPIC_API_KEY (stessa usata per OCR e sincronizzazione PUN).
 const anthropic = new Anthropic();
@@ -59,6 +60,15 @@ export async function POST(req: NextRequest) {
 
   const registro = REGISTRI[Math.floor(Math.random() * REGISTRI.length)];
 
+  const direttiveAttive = await prisma.direttivaScript.findMany({
+    where: { attiva: true },
+    orderBy: { ordinamento: 'asc' }
+  });
+  const direttiveTesto =
+    direttiveAttive.length > 0
+      ? `\n\nIstruzioni aggiuntive dal team, da rispettare insieme a tutto quanto sopra:\n${direttiveAttive.map((d) => `- ${d.testo}`).join('\n')}`
+      : '';
+
   const contesto = `Dati per lo script:
 - Cliente: ${body.nomeCliente || 'non specificato'}
 - Commodity: ${body.commodity === 'GAS' ? 'gas' : 'energia elettrica'}
@@ -69,7 +79,7 @@ export async function POST(req: NextRequest) {
 - Risparmio annuo stimato: ${body.risparmioAnnuo != null ? body.risparmioAnnuo.toFixed(2) + ' €' : 'non disponibile/non conveniente'}
 - Nome del consulente (che parla in prima persona): ${body.nomeConsulente || 'il tuo consulente Enel'}
 
-Per questa generazione, usa un registro comunicativo ${registro}.`;
+Per questa generazione, usa un registro comunicativo ${registro}.${direttiveTesto}`;
 
   let message;
   try {

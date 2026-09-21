@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente, DirettivaScript } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -15,6 +15,7 @@ export function AdminClient() {
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
+  const [direttive, setDirettive] = useState<DirettivaScript[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [pun, setPun] = useState<PunMensile[]>([]);
   const [psv, setPsv] = useState<PsvMensile[]>([]);
@@ -26,7 +27,7 @@ export function AdminClient() {
   const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
   const [sincronizzandoPsv, setSincronizzandoPsv] = useState(false);
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario' | 'direttive'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -34,6 +35,7 @@ export function AdminClient() {
   }
   function ricaricaArgomenti() {
     fetch('/api/argomenti').then((r) => r.json()).then(setArgomenti);
+    fetch('/api/direttive').then((r) => r.json()).then(setDirettive);
   }
 
   useEffect(() => {
@@ -340,6 +342,45 @@ export function AdminClient() {
     setArgomenti((prev) => [...prev, nuovo]);
   }
 
+  function aggiornaTestoDirettiva(id: string, testo: string) {
+    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, testo } : d)));
+  }
+
+  async function salvaTestoDirettiva(id: string) {
+    const d = direttive.find((x) => x.id === id);
+    if (!d) return;
+    await fetch(`/api/direttive/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testo: d.testo })
+    });
+  }
+
+  async function toggleAttivaDirettiva(id: string, attiva: boolean) {
+    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, attiva } : d)));
+    await fetch(`/api/direttive/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attiva })
+    });
+  }
+
+  async function eliminaDirettiva(id: string) {
+    if (!confirm('Eliminare questa direttiva?')) return;
+    await fetch(`/api/direttive/${id}`, { method: 'DELETE' });
+    setDirettive((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  async function aggiungiDirettiva() {
+    const res = await fetch('/api/direttive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ testo: 'Nuova direttiva — modifica questo testo', ordinamento: 99 })
+    });
+    const nuova = await res.json();
+    setDirettive((prev) => [...prev, nuova]);
+  }
+
   const categorie = Array.from(new Set(parametri.map((p) => p.categoria)));
   const tipiArgomento: TipoArgomento[] = ['ENEL_VINCE', 'CONCORRENTE_VARIABILE', 'CONCORRENTE_FISSO', 'GENERALE'];
 
@@ -386,6 +427,12 @@ export function AdminClient() {
           onClick={() => setTab('argomentario')}
         >
           Argomentario ({argomenti.length})
+        </button>
+        <button
+          className={tab === 'direttive' ? 'btn-primary text-xs' : 'btn-secondary text-xs'}
+          onClick={() => setTab('direttive')}
+        >
+          Caracozzo AI ({direttive.length})
         </button>
         {tab === 'offerte' && (
           <button className="btn-primary text-xs ml-auto" onClick={() => setFormAperto('nuova')}>
@@ -882,6 +929,48 @@ export function AdminClient() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'direttive' && (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm font-semibold">Istruzioni per Caracozzo AI</div>
+              <p className="text-xs text-enel-ink/50 mt-1 max-w-2xl">
+                Indicazioni aggiuntive che guidano ogni script di vendita generato in "Confronto concorrenza" — es.
+                un tono da tenere, qualcosa da menzionare sempre, un'espressione da evitare. Vengono incluse ad ogni
+                generazione, insieme ai dati del cliente. L'interruttore disattiva una direttiva senza eliminarla.
+              </p>
+            </div>
+            <button className="btn-primary text-xs whitespace-nowrap" onClick={aggiungiDirettiva}>
+              + Aggiungi direttiva
+            </button>
+          </div>
+          <div className="space-y-3 mt-4">
+            {direttive.map((d) => (
+              <div key={d.id} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={d.attiva}
+                  onChange={(e) => toggleAttivaDirettiva(d.id, e.target.checked)}
+                  className="mt-2"
+                  title="Attiva"
+                />
+                <textarea
+                  className={`input flex-1 ${!d.attiva ? 'opacity-40' : ''}`}
+                  rows={2}
+                  value={d.testo}
+                  onChange={(e) => aggiornaTestoDirettiva(d.id, e.target.value)}
+                  onBlur={() => salvaTestoDirettiva(d.id)}
+                />
+                <button className="text-xs text-red-600 hover:underline mt-2" onClick={() => eliminaDirettiva(d.id)}>
+                  Elimina
+                </button>
+              </div>
+            ))}
+            {direttive.length === 0 && <div className="text-xs text-enel-ink/40">Nessuna direttiva impostata.</div>}
+          </div>
         </div>
       )}
 

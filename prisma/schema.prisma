@@ -120,6 +120,18 @@ model ArgomentoVendita {
   updatedAt   DateTime      @updatedAt
 }
 
+// Istruzioni personalizzate per "Caracozzo AI": indicazioni che il team può
+// aggiungere per guidare come lo script di vendita viene scritto (es. un
+// tono da tenere, un argomento da menzionare sempre, qualcosa da evitare),
+// senza dover cambiare il codice. Lette e incluse ad ogni generazione.
+model DirettivaScript {
+  id          String   @id @default(cuid())
+  testo       String
+  attiva      Boolean  @default(true)
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
 model Simulazione {
   id                String   @id @default(cuid())
   nomeCliente       String?

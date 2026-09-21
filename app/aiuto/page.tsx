@@ -207,7 +207,8 @@ export default function AiutoPage() {
             { t: 'Rete e oneri', d: 'Componenti ARERA per fascia di potenza (BTA1-BTA6). ASOS/ARIM cambiano ogni trimestre.' },
             { t: 'PUN mensile', d: 'Serie storica per il grafico di Mercato. "Sincronizza da web" chiede a Claude di cercarlo.' },
             { t: 'Concorrenza', d: 'Offerte concorrenti mostrate su Mercato. Controlla le non attive prima di spuntarle.' },
-            { t: 'Argomentario', d: 'Frasi di vendita usate in Confronto concorrenza per presentare il risultato al cliente.' }
+            { t: 'Argomentario', d: 'Frasi di vendita usate in Confronto concorrenza per presentare il risultato al cliente.' },
+            { t: 'Caracozzo AI', d: 'Istruzioni aggiuntive che guidano ogni script di vendita generato dall\'AI — tono, cose da menzionare sempre, cose da evitare.' }
           ].map((tab) => (
             <div key={tab.t} className="rounded-lg border border-enel-line p-3">
               <div className="text-sm font-medium">{tab.t}</div>
