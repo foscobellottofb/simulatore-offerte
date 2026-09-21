@@ -351,12 +351,7 @@ export function ConcorrenzaClient() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
-      <div className="flex items-start justify-between gap-4 mb-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Confronto con la concorrenza</h1>
-        <button className="btn-secondary text-xs whitespace-nowrap" onClick={resetForm}>
-          ↺ Azzera tutti i campi
-        </button>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight mb-1">Confronto con la concorrenza</h1>
       <p className="text-sm text-enel-ink/60 mb-6">
         Inserisci solo prezzo kWh e CCV del concorrente (a mano o da foto bolletta): gli altri dati restano quelli
         del cliente inseriti qui sotto. <span className="text-enel-green font-medium">In verde</span> i due campi
@@ -365,7 +360,12 @@ export function ConcorrenzaClient() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card overflow-hidden">
-          <div className="fascia-navy">Dati cliente</div>
+          <div className="fascia-navy flex items-center justify-between">
+            <span>Dati cliente</span>
+            <button className="text-white/80 hover:text-white text-xs font-normal normal-case tracking-normal" onClick={resetForm}>
+              ↺ Azzera tutti i campi
+            </button>
+          </div>
           <div className="p-5">
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>

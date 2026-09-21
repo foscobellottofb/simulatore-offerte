@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Offerta, ParametroDettaglio, FasciaRete, RisultatoCalcolo, Commodity } from '@/lib/types';
 import { calcolaTutteLeOfferte } from '@/lib/calcoli';
 import { AiutoCampo } from '@/components/AiutoCampo';
@@ -27,6 +28,7 @@ interface DatiClienteSalvati {
 }
 
 export function SimulatoreClient() {
+  const router = useRouter();
   const salvati = leggiPersistito<DatiClienteSalvati>('simulotto:cliente');
 
   const [commodity, setCommodity] = useState<Commodity>(salvati.commodity ?? 'LUCE');
@@ -308,6 +310,7 @@ export function SimulatoreClient() {
                         onClick={() => {
                           setSelezionata(r.offerta.id);
                           localStorage.setItem('offertaSelezionataId', r.offerta.id);
+                          router.push('/concorrenza');
                         }}
                       >
                         Confronta
