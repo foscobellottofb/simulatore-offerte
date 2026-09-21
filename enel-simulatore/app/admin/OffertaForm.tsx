@@ -67,15 +67,16 @@ export function OffertaForm({
   const variabile = valori.tipoPrezzo === 'VARIABILE_CAP';
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-      <div className="card w-full max-w-2xl p-5 my-8">
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center p-4">
+      <div className="card w-full max-w-2xl p-5 my-8 max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="font-semibold text-base">{offerta ? 'Modifica offerta' : 'Nuova offerta'}</div>
           <button onClick={onClose} className="text-enel-ink/40 hover:text-enel-ink text-sm">
             Chiudi
           </button>
         </div>
 
+        <div className="overflow-y-auto pr-1 flex-1 modale-scroll">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className="label">Nome offerta</label>
@@ -257,8 +258,9 @@ export function OffertaForm({
         </div>
 
         {errore && <div className="text-xs text-red-600 mt-3">{errore}</div>}
+        </div>
 
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="flex justify-end gap-2 mt-5 shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>
             Annulla
           </button>
