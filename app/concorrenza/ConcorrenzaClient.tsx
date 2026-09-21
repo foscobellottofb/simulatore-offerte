@@ -83,6 +83,20 @@ export function ConcorrenzaClient() {
     });
   }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
+  const [offerte, setOfferte] = useState<Offerta[]>([]);
+  const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
+  const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
+  const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
+  const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>(
+    salvatiConcorrente.ocrStato === 'ok' ? 'ok' : 'idle'
+  );
+  const [ocrNote, setOcrNote] = useState<string | null>(salvatiConcorrente.ocrNote ?? null);
+  const [ocrConfidenza, setOcrConfidenza] = useState<string | null>(salvatiConcorrente.ocrConfidenza ?? null);
+  const [analisiIA, setAnalisiIA] = useState<string | null>(salvatiConcorrente.analisiIA ?? null);
+  const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>(
+    salvatiConcorrente.costiExtra ?? []
+  );
+
   useEffect(() => {
     scriviPersistito('simulotto:concorrente', {
       prezzoKwh,
@@ -97,20 +111,6 @@ export function ConcorrenzaClient() {
       ocrStato
     });
   }, [prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore, analisiIA, costiExtra, ocrNote, ocrConfidenza, ocrStato]);
-
-  const [offerte, setOfferte] = useState<Offerta[]>([]);
-  const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
-  const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
-  const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
-  const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>(
-    salvatiConcorrente.ocrStato === 'ok' ? 'ok' : 'idle'
-  );
-  const [ocrNote, setOcrNote] = useState<string | null>(salvatiConcorrente.ocrNote ?? null);
-  const [ocrConfidenza, setOcrConfidenza] = useState<string | null>(salvatiConcorrente.ocrConfidenza ?? null);
-  const [analisiIA, setAnalisiIA] = useState<string | null>(salvatiConcorrente.analisiIA ?? null);
-  const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>(
-    salvatiConcorrente.costiExtra ?? []
-  );
 
   // Il caricamento foto/PDF (analisi AI, a pagamento) è riservato agli
   // operatori abilitati con una password condivisa; l'inserimento manuale
