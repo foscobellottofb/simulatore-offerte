@@ -23,6 +23,7 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "ccvMensile": number | null,
   "totaleBolletta": number | null,
   "fornitore": string | null,
+  "tipoPrezzo": "FISSO" | "VARIABILE" | null,
   "consumoKwh": number | null,
   "potenzaKw": number | null,
   "giorniFattura": number | null,
@@ -44,6 +45,9 @@ Regole:
   il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
   orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo.
 - "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
+- "tipoPrezzo": "FISSO" se il prezzo dell'energia è bloccato per tutta la durata del contratto, "VARIABILE"
+  se è indicizzato a un indice di mercato (PUN, PSV, TTF, ecc.) e quindi cambia periodicamente. Se non è
+  chiaramente indicato, usa null.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
 - "consumoKwh": il consumo del periodo fatturato in kWh (elettricità) o Smc (gas) — quello effettivamente
   fatturato in questa bolletta, non un consumo annuo stimato. Se ci sono più fasce (F1/F2/F3), usa il

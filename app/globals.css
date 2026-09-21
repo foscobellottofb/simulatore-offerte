@@ -26,7 +26,7 @@ body {
    due indispensabili a fare qualunque simulazione (prezzo energia e CCV) —
    così si vede a colpo d'occhio il minimo richiesto rispetto al resto. */
 .input-azzurro {
-  @apply w-full border border-sky-200 bg-sky-50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400;
+  @apply w-full border border-sky-300 bg-sky-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400;
 }
 .input-verde {
   @apply w-full border border-enel-green/40 bg-enel-green/10 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-enel-green/40 focus:border-enel-green;

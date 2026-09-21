@@ -33,6 +33,11 @@ interface DatiConcorrenteSalvati {
   tipoPrezzoConcorrente: 'FISSO' | 'VARIABILE';
   totaleDichiarato: number | '';
   nomeFornitore: string;
+  analisiIA: string | null;
+  costiExtra: { descrizione: string; importo: number | null; tipo: string }[];
+  ocrNote: string | null;
+  ocrConfidenza: string | null;
+  ocrStato: 'idle' | 'analisi' | 'ok' | 'errore';
 }
 
 export function ConcorrenzaClient() {
@@ -79,18 +84,33 @@ export function ConcorrenzaClient() {
   }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
   useEffect(() => {
-    scriviPersistito('simulotto:concorrente', { prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore });
-  }, [prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore]);
+    scriviPersistito('simulotto:concorrente', {
+      prezzoKwh,
+      ccv,
+      tipoPrezzoConcorrente,
+      totaleDichiarato,
+      nomeFornitore,
+      analisiIA,
+      costiExtra,
+      ocrNote,
+      ocrConfidenza,
+      ocrStato
+    });
+  }, [prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore, analisiIA, costiExtra, ocrNote, ocrConfidenza, ocrStato]);
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
-  const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
-  const [ocrNote, setOcrNote] = useState<string | null>(null);
-  const [ocrConfidenza, setOcrConfidenza] = useState<string | null>(null);
-  const [analisiIA, setAnalisiIA] = useState<string | null>(null);
-  const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
+  const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>(
+    salvatiConcorrente.ocrStato === 'ok' ? 'ok' : 'idle'
+  );
+  const [ocrNote, setOcrNote] = useState<string | null>(salvatiConcorrente.ocrNote ?? null);
+  const [ocrConfidenza, setOcrConfidenza] = useState<string | null>(salvatiConcorrente.ocrConfidenza ?? null);
+  const [analisiIA, setAnalisiIA] = useState<string | null>(salvatiConcorrente.analisiIA ?? null);
+  const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>(
+    salvatiConcorrente.costiExtra ?? []
+  );
 
   // Il caricamento foto/PDF (analisi AI, a pagamento) è riservato agli
   // operatori abilitati con una password condivisa; l'inserimento manuale
@@ -251,6 +271,7 @@ export function ConcorrenzaClient() {
       if (data.ccvMensile) setCcv(data.ccvMensile);
       if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
       if (data.fornitore) setNomeFornitore(data.fornitore);
+      if (data.tipoPrezzo === 'FISSO' || data.tipoPrezzo === 'VARIABILE') setTipoPrezzoConcorrente(data.tipoPrezzo);
       if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
       if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
       if (data.giorniFattura) {
@@ -522,6 +543,8 @@ export function ConcorrenzaClient() {
                 <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-1 text-xs">
                   <div className="text-enel-ink/50">Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'}</div>
                   <div className="font-medium text-enel-ink">{prezzoKwh !== '' ? `${prezzoKwh} €` : '—'}</div>
+                  <div className="text-enel-ink/50">Tipo prezzo</div>
+                  <div className="font-medium text-enel-ink capitalize">{tipoPrezzoConcorrente.toLowerCase()}</div>
                   <div className="text-enel-ink/50">CCV mensile</div>
                   <div className="font-medium text-enel-ink">{ccv !== '' ? `${ccv} €` : '—'}</div>
                   <div className="text-enel-ink/50">Consumo</div>
