@@ -36,8 +36,8 @@ export function SimulatoreClient() {
   const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
   const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
   const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
-  const [percentualeConsumoF2, setPercentualeConsumoF2] = useState(20);
-  const [percentualeConsumoF3, setPercentualeConsumoF3] = useState(0);
+  const [percentualiF2, setPercentualiF2] = useState<Record<string, number>>({});
+  const [percentualiF3, setPercentualiF3] = useState<Record<string, number>>({});
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
@@ -84,21 +84,29 @@ export function SimulatoreClient() {
     consumoKwh: consumoKwh === '' ? 0 : consumoKwh,
     tipoConsumo,
     potenzaKw: potenzaKw === '' ? 0 : potenzaKw,
-    giorniFattura: giorniFattura === '' ? 0 : giorniFattura,
-    percentualeConsumoF2,
-    percentualeConsumoF3
+    giorniFattura: giorniFattura === '' ? 0 : giorniFattura
   };
+
+  // Ogni offerta ha la propria fascia F2/F3 (orari diversi = quota di
+  // consumo diversa): 20% di default finché l'utente non la corregge per
+  // quella specifica offerta, mai un valore unico condiviso da tutte.
+  const percentualiPerOfferta = useMemo(() => {
+    const mappa: Record<string, { f2?: number; f3?: number }> = {};
+    offerte.forEach((o) => {
+      if (o.prezzoF2 != null || o.prezzoF3 != null) {
+        mappa[o.id] = {
+          f2: o.prezzoF2 != null ? percentualiF2[o.id] ?? 20 : undefined,
+          f3: o.prezzoF3 != null ? percentualiF3[o.id] ?? 0 : undefined
+        };
+      }
+    });
+    return mappa;
+  }, [offerte, percentualiF2, percentualiF3]);
 
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
-    return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2, percentualeConsumoF3, loading]);
-
-  // I campi "quota consumo in F2/F3" hanno senso solo se almeno un'offerta
-  // disponibile (es. "Ore Happy") ha davvero più fasce di prezzo.
-  const haOfferteConF2 = offerte.some((o) => o.commodity === commodity && o.prezzoF2 != null);
-  const haOfferteConF3 = offerte.some((o) => o.commodity === commodity && o.prezzoF3 != null);
-
+    return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete, percentualiPerOfferta);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualiPerOfferta, loading]);
 
   const migliore = risultati[0];
   const attiva = risultati.find((r) => r.offerta.id === selezionata) ?? migliore;
@@ -191,36 +199,6 @@ export function SimulatoreClient() {
               onChange={(e) => setGiorniFattura(e.target.value === '' ? '' : Number(e.target.value))}
             />
           </div>
-          {haOfferteConF2 && (
-            <div>
-              <label className="label">Quota consumo stimata in F2 (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="input"
-                value={percentualeConsumoF2}
-                onChange={(e) => setPercentualeConsumoF2(Number(e.target.value))}
-              />
-              <div className="text-[11px] text-enel-ink/40 mt-1">
-                Per offerte a più fasce (es. "Ore Happy"): quanto del consumo del cliente stimi che ricada in F2 —
-                chiedilo al cliente o stimalo. Il resto va in F1.
-              </div>
-            </div>
-          )}
-          {haOfferteConF3 && (
-            <div>
-              <label className="label">Quota consumo stimata in F3 (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className="input"
-                value={percentualeConsumoF3}
-                onChange={(e) => setPercentualeConsumoF3(Number(e.target.value))}
-              />
-            </div>
-          )}
           <div>
             <label className="label">Nome cliente (opzionale)</label>
             <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
@@ -283,10 +261,43 @@ export function SimulatoreClient() {
                           <div>
                             F1 {r.offerta.prezzoFisso?.toFixed(4)} €/{r.offerta.commodity === 'GAS' ? 'Smc' : 'kWh'}
                           </div>
-                          <div className="text-xs text-enel-ink/50">
-                            F2 {r.offerta.prezzoF2.toFixed(4)}
-                            {r.offerta.oreInizioF2 != null && ` (${r.offerta.oreInizioF2}-${r.offerta.oreFineF2})`}
-                            {r.offerta.prezzoF3 != null && ` · F3 ${r.offerta.prezzoF3.toFixed(4)}`}
+                          <div className="text-xs text-enel-ink/50 flex items-center justify-end gap-1 flex-wrap">
+                            <span>
+                              F2 {r.offerta.prezzoF2.toFixed(4)}
+                              {r.offerta.oreInizioF2 != null && ` (${r.offerta.oreInizioF2}-${r.offerta.oreFineF2})`}
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              title={`Quota consumo di questo cliente in fascia F2 (${r.offerta.oreInizioF2}-${r.offerta.oreFineF2})`}
+                              className="w-11 text-center border border-enel-line rounded px-1 py-0.5 text-xs"
+                              value={percentualiF2[r.offerta.id] ?? 20}
+                              onChange={(e) =>
+                                setPercentualiF2((prev) => ({ ...prev, [r.offerta.id]: Number(e.target.value) }))
+                              }
+                            />
+                            <span>%</span>
+                            {r.offerta.prezzoF3 != null && (
+                              <>
+                                <span>
+                                  · F3 {r.offerta.prezzoF3.toFixed(4)}
+                                  {r.offerta.oreInizioF3 != null && ` (${r.offerta.oreInizioF3}-${r.offerta.oreFineF3})`}
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  title={`Quota consumo di questo cliente in fascia F3 (${r.offerta.oreInizioF3}-${r.offerta.oreFineF3})`}
+                                  className="w-11 text-center border border-enel-line rounded px-1 py-0.5 text-xs"
+                                  value={percentualiF3[r.offerta.id] ?? 0}
+                                  onChange={(e) =>
+                                    setPercentualiF3((prev) => ({ ...prev, [r.offerta.id]: Number(e.target.value) }))
+                                  }
+                                />
+                                <span>%</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       ) : (

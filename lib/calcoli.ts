@@ -173,10 +173,21 @@ export function calcolaTutteLeOfferte(
   offerte: Offerta[],
   input: InputSimulazione,
   parametri: ParametroDettaglio[],
-  fasceRete: FasciaRete[] = FASCE_DEFAULT
+  fasceRete: FasciaRete[] = FASCE_DEFAULT,
+  percentualiPerOfferta?: Record<string, { f2?: number; f3?: number }>
 ): RisultatoCalcolo[] {
   return filtraOfferteDisponibili(offerte, input)
-    .map((o) => calcolaOfferta(o, input, parametri, fasceRete))
+    .map((o) => {
+      const override = percentualiPerOfferta?.[o.id];
+      const inputOfferta = override
+        ? {
+            ...input,
+            percentualeConsumoF2: override.f2 ?? input.percentualeConsumoF2,
+            percentualeConsumoF3: override.f3 ?? input.percentualeConsumoF3
+          }
+        : input;
+      return calcolaOfferta(o, inputOfferta, parametri, fasceRete);
+    })
     .sort((a, b) => a.totaleBolletta - b.totaleBolletta);
 }
 
