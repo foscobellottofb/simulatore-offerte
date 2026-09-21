@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { BollettaPdf } from '@/lib/BollettaPdf';
+import { RisultatoCalcolo, InputSimulazione } from '@/lib/types';
+
+export async function POST(req: NextRequest) {
+  const body: {
+    risultato: RisultatoCalcolo;
+    input: InputSimulazione;
+    nomeCliente?: string;
+    pod?: string;
+    indirizzoFornitura?: string;
+    citta?: string;
+    codiceFiscalePiva?: string;
+  } = await req.json();
+
+  const buffer = await renderToBuffer(
+    BollettaPdf({
+      risultato: body.risultato,
+      input: body.input,
+      nomeCliente: body.nomeCliente,
+      pod: body.pod,
+      indirizzoFornitura: body.indirizzoFornitura,
+      citta: body.citta,
+      codiceFiscalePiva: body.codiceFiscalePiva
+    })
+  );
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="bolletta-simulata-${body.risultato.offerta.nome.replace(/\s+/g, '-')}.pdf"`
+    }
+  });
+}

@@ -1,0 +1,200 @@
+// Schema del database del simulatore offerte Enel SMB.
+// Deploy consigliato: Vercel Postgres o Supabase (entrambi Postgres).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Commodity {
+  LUCE
+  GAS
+}
+
+enum TipoPrezzo {
+  FISSO
+  VARIABILE_CAP
+  PERSONALIZZATA
+}
+
+// Una riga = una offerta Enel Business, ricalcata dal foglio
+// "CTE_Enel_SMB_import_SharePoint" che oggi mantieni a mano in Excel.
+model Offerta {
+  id                  String     @id @default(cuid())
+  nome                String
+  commodity           Commodity
+  tipoPrezzo          TipoPrezzo
+  potenzaMinKw        Float? // es. 0, 3, 15 - null = non applicabile (gas)
+  potenzaMaxKw        Float? // es. 15, 25
+  prezzoFisso         Float? // €/kWh, valorizzato se tipoPrezzo = FISSO
+  parametroAlfa       Float? // €/kWh, valorizzato se VARIABILE_CAP
+  cap                 Float? // €/kWh, tetto massimo se VARIABILE_CAP
+  ccvMensile          Float // corrispettivo di vendita fisso mensile, €
+  durataMesi          Int
+  disponibileTablet   Boolean @default(true)
+  disponibileCartaceo Boolean @default(false)
+  canalePreferenziale String? // Tablet / Cartaceo
+  vendibilita         String // es. "SINGLE / DUAL / MULTI"
+  strutturaPrezzo     String @default("Monoraria")
+  // Modello a fasce orarie (F1 = prezzoFisso sopra, F2/F3 opzionali): la
+  // maggior parte delle offerte ha solo F1 (un prezzo per tutte le ore).
+  // Offerte come "Ore Happy" hanno anche F2 (e potenzialmente F3), ciascuna
+  // col proprio prezzo mantenuto così come letto dalla scheda dell'offerta.
+  prezzoF2   Float?
+  oreInizioF2 Int?
+  oreFineF2   Int?
+  prezzoF3   Float?
+  oreInizioF3 Int?
+  oreFineF3   Int?
+  scontoDalMese         Int? // da quale mese contrattuale si applica lo sconto orario
+  richiedeContatore2G   Boolean @default(false)
+  attiva                Boolean @default(true)
+  note                String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  simulazioni         Simulazione[]
+
+  @@index([commodity, attiva])
+}
+
+// Voci di dettaglio configurabili (accise, IVA, trasmissione, oneri di sistema...).
+// Sostituisce la tabella statica che oggi tieni fuori da Power BI.
+model ParametroDettaglio {
+  id          String   @id @default(cuid())
+  chiave      String   @unique // es. "ACCISA_LUCE_KWH", "IVA_PERC", "TRASMISSIONE_KWH"
+  etichetta   String   // es. "Accisa energia elettrica"
+  categoria   String   // "Accise e IVA" | "Trasmissione e oneri" | "Altre voci"
+  commodity   Commodity?
+  valore      Float
+  unita       String   // "€/kWh" | "%" | "€/mese" | "€/kW"
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+// Componenti di rete ARERA (distribuzione + oneri ASOS/ARIM), una riga per
+// fascia di potenza (BTA1..BTA6). Prima erano hardcoded in lib/tariffeLuce.ts
+// e non modificabili da interfaccia: ora sono in DB e editabili da Admin,
+// sezione "Rete e oneri (per fascia di potenza)".
+model FasciaRete {
+  id                       String    @id @default(cuid())
+  commodity                Commodity @default(LUCE)
+  fascia                   String    @unique // "BTA1".."BTA6"
+  etichetta                String    // es. "Potenza impegnata ≤ 1,5 kW"
+  minKw                    Float     // esclusivo, tranne 0 per la prima fascia
+  maxKw                    Float?    // incluso; null = nessun limite superiore
+  distribuzioneFissaAnno   Float     // €/POD/anno
+  distribuzionePotenzaAnno Float     // €/kW/anno
+  distribuzioneEnergiaKwh  Float     // €/kWh
+  asosFissaAnno            Float     // €/POD/anno
+  asosPotenzaAnno          Float     // €/kW/anno
+  asosEnergiaKwh           Float     // €/kWh
+  arimFissaAnno            Float     // €/POD/anno
+  arimPotenzaAnno          Float     // €/kW/anno
+  arimEnergiaKwh           Float     // €/kWh
+  ordinamento              Int       @default(0)
+  updatedAt                DateTime  @updatedAt
+}
+
+// Ogni simulazione salvata: dati cliente + offerta scelta + eventuale confronto concorrente.
+enum TipoArgomento {
+  ENEL_VINCE
+  CONCORRENTE_VARIABILE
+  CONCORRENTE_FISSO
+  GENERALE
+}
+
+// Argomenti di supporto per il consulente, mostrati nella pagina Confronto
+// concorrenza in base al risultato (Enel vince/perde) e al tipo di prezzo
+// del concorrente. Amministrabili dalla pagina Admin senza toccare il codice.
+model ArgomentoVendita {
+  id          String        @id @default(cuid())
+  tipo        TipoArgomento
+  testo       String
+  attivo      Boolean       @default(true)
+  ordinamento Int           @default(0)
+  updatedAt   DateTime      @updatedAt
+}
+
+model Simulazione {
+  id                String   @id @default(cuid())
+  nomeCliente       String?
+  consumoAnnuoKwh   Float
+  potenzaKw         Float
+  giorniFattura     Int      @default(60)
+  commodity         Commodity
+
+  offertaId         String?
+  offerta           Offerta? @relation(fields: [offertaId], references: [id])
+
+  // Dati concorrente, inseriti a mano o via OCR
+  concorrenteNome      String?
+  concorrentePrezzoKwh Float?
+  concorrenteCcv       Float?
+  concorrenteTotale    Float? // totale bolletta dichiarato, per verifica
+
+  totaleEnel        Float?
+  totaleConcorrente Float?
+  rispiarmoAnnuo    Float?
+
+  fotoBollettaUrl   String? // se caricata una foto per OCR
+
+  createdAt DateTime @default(now())
+}
+
+// Valore medio mensile del PUN Index GME (€/MWh), usato nella pagina pubblica
+// "/mercato" per il grafico multi-anno e per dare contesto ai consulenti sul
+// mercato all'ingrosso. "stimato" segnala i mesi presi da fonti secondarie
+// (non dal sito GME direttamente) o non ancora confermati, da verificare.
+model PunMensile {
+  id        String   @id @default(cuid())
+  anno      Int
+  mese      Int // 1..12
+  valoreMwh Float // €/MWh
+  stimato   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([anno, mese])
+}
+
+// Indice PSV (gas), l'equivalente del PUN per il gas naturale: media mensile
+// del punto di scambio virtuale gestito da Snam, in €/Smc (unità già usata
+// altrove nell'app per il gas, coerente con come compare in bolletta).
+model PsvMensile {
+  id        String   @id @default(cuid())
+  anno      Int
+  mese      Int // 1..12
+  valoreSmc Float // €/Smc
+  stimato   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([anno, mese])
+}
+
+// Prezzi indicativi delle principali offerte concorrenti, inseriti a mano
+// dal team commerciale (nessuna fonte pubblica affidabile li aggrega). Il
+// campo "canale" distingue le offerte "solo web" (spesso con condizioni non
+// replicabili in un contatto commerciale diretto) da quelle vendute anche
+// tramite altri canali, per non confrontarle come se fossero equivalenti.
+model OffertaConcorrente {
+  id          String    @id @default(cuid())
+  fornitore   String // es. "A2A", "Iren", "Eni Plenitude"
+  nomeOfferta String
+  commodity   Commodity
+  tipoPrezzo  String // "FISSO" | "VARIABILE"
+  prezzoKwh   Float? // €/kWh se fisso, oppure spread/alfa se variabile
+  ccvMensile  Float?
+  sconto      String? // testo libero, es. "-10% primi 12 mesi"
+  durataDal   String? // data inizio validità offerta, formato libero (es. "2026-08-01")
+  durataAl    String? // data fine validità offerta
+  canale      String // "WEB" | "ALTRO"
+  note        String?
+  cteBase64   String? // foto/documento di conferma caricato da chi segnala (data URL), per verifica admin
+  attiva      Boolean  @default(true)
+  ordinamento Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
