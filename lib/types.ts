@@ -72,25 +72,12 @@ export interface ArgomentoVendita {
   ordinamento: number;
 }
 
-// Direttiva di contenuto per "Caracozzo AI" (generatore script di vendita),
-// editabile da Admin senza toccare il codice.
-export interface DirettivaScript {
-  id: string;
-  testo: string;
-  attiva: boolean;
-  ordinamento: number;
-}
-
 export interface InputSimulazione {
   commodity: Commodity;
   consumoKwh: number; // valore inserito dall'utente: annuale oppure del periodo, secondo tipoConsumo
   tipoConsumo: 'ANNUO' | 'PERIODO';
   potenzaKw: number;
   giorniFattura: number;
-  // Ambito tariffario ARERA del punto di fornitura gas (le tariffe di
-  // distribuzione/trasporto gas, a differenza della luce, variano per zona
-  // geografica). Ignorato per la luce. Vedi lib/zoneGas.ts.
-  zonaGas?: string;
   // Per offerte con più fasce orarie (F2, eventualmente F3): quanta parte
   // del consumo del cliente ricade in ciascuna fascia, 0-100. Il resto va
   // in F1. Scelte manualmente da chi usa il simulatore (stima/chiesto al

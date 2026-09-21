@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente, DirettivaScript } from '@/lib/types';
+import { Offerta, ParametroDettaglio, ArgomentoVendita, TipoArgomento, FasciaRete, PunMensile, PsvMensile, OffertaConcorrente } from '@/lib/types';
 import { OffertaForm } from './OffertaForm';
 
 const ETICHETTE_TIPO: Record<TipoArgomento, string> = {
@@ -15,7 +15,6 @@ export function AdminClient() {
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
-  const [direttive, setDirettive] = useState<DirettivaScript[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [pun, setPun] = useState<PunMensile[]>([]);
   const [psv, setPsv] = useState<PsvMensile[]>([]);
@@ -27,11 +26,7 @@ export function AdminClient() {
   const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
   const [sincronizzandoPsv, setSincronizzandoPsv] = useState(false);
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
-  const [mesiPun, setMesiPun] = useState(18);
-  const [mesiPsv, setMesiPsv] = useState(18);
-  const [contiConcorrenti, setContiConcorrenti] = useState({ web: 0, fisso: 8, variabile: 8 });
-  const [progressoConcorrenti, setProgressoConcorrenti] = useState<string | null>(null);
-  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario' | 'caracozzo'>('offerte');
+  const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
 
   function ricaricaOfferte() {
@@ -39,7 +34,6 @@ export function AdminClient() {
   }
   function ricaricaArgomenti() {
     fetch('/api/argomenti').then((r) => r.json()).then(setArgomenti);
-    fetch('/api/direttive').then((r) => r.json()).then(setDirettive);
   }
 
   useEffect(() => {
@@ -146,11 +140,7 @@ export function AdminClient() {
   async function sincronizzaPunDalWeb() {
     setSincronizzandoPun(true);
     try {
-      const res = await fetch('/api/pun/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mesi: mesiPun })
-      });
+      const res = await fetch('/api/pun/sync', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -206,11 +196,7 @@ export function AdminClient() {
   async function sincronizzaPsvDalWeb() {
     setSincronizzandoPsv(true);
     try {
-      const res = await fetch('/api/psv/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mesi: mesiPsv })
-      });
+      const res = await fetch('/api/psv/sync', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -223,112 +209,19 @@ export function AdminClient() {
     }
   }
 
-  const FORNITORI_RICERCA = [
-    'A2A', 'Iren', 'Edison', 'Eni Plenitude', 'Sorgenia', 'Acea', 'Hera Comm',
-    'Engie', 'Illumia', 'Wekiwi', 'Octopus Energy', 'Green Network', 'NeN', 'Dolomiti Energia'
-  ];
-  // Deve corrispondere a MAX_RICERCHE_PER_CHIAMATA in app/api/concorrenti/sync/route.ts
-  // (qui serve solo per mostrare la stima all'utente prima di partire).
-  const MAX_RICERCHE_ADMIN = 4;
-
-  const [testandoOpenData, setTestandoOpenData] = useState(false);
-  const [risultatoOpenData, setRisultatoOpenData] = useState<any>(null);
-
-  async function testaAccessoOpenData() {
-    setTestandoOpenData(true);
-    setRisultatoOpenData(null);
+  async function cercaConcorrentiDalWeb() {
+    setSincronizzandoConcorrenti(true);
     try {
-      const res = await fetch('/api/concorrenti/opendata-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      let data: any;
-      try {
-        data = await res.json();
-      } catch {
-        setRisultatoOpenData({ ok: false, errore: 'Risposta non-JSON dal server (vedi Vercel logs per dettagli).' });
+      const res = await fetch('/api/concorrenti/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error ?? 'Ricerca non riuscita.');
         return;
       }
-      setRisultatoOpenData(data);
-    } catch (err) {
-      setRisultatoOpenData({ ok: false, errore: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setTestandoOpenData(false);
-    }
-  }
-
-  async function cercaConcorrentiDalWeb() {
-    const confermato = window.confirm(
-      `Stai per lanciare fino a 14 chiamate (una per fornitore), ciascuna con un tetto di ${MAX_RICERCHE_ADMIN} ricerche web.\n\n` +
-        `Costo massimo stimato: circa 1,5-2,5 € totali (con questo limite tecnico ora attivo, non può più superarlo di molto). ` +
-        `Richiede qualche minuto.\n\nProcedere?`
-    );
-    if (!confermato) return;
-
-    setSincronizzandoConcorrenti(true);
-    // Budget residuo per categoria: si esaurisce man mano che i fornitori
-    // trovano offerte, così ci si ferma appena raggiunti i totali richiesti
-    // invece di continuare a interrogare fornitori inutilmente.
-    let residuo = { web: contiConcorrenti.web, fisso: contiConcorrenti.fisso, variabile: contiConcorrenti.variabile };
-    let totaleTrovate = 0;
-    const falliti: string[] = [];
-
-    try {
-      for (const fornitore of FORNITORI_RICERCA) {
-        if (residuo.web <= 0 && residuo.fisso <= 0 && residuo.variabile <= 0) break;
-
-        setProgressoConcorrenti(`Cerco offerte di ${fornitore}… (${totaleTrovate} trovate finora)`);
-
-        try {
-          const res = await fetch('/api/concorrenti/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fornitore,
-              webCount: residuo.web,
-              fissoCount: residuo.fisso,
-              variabileCount: residuo.variabile
-            })
-          });
-
-          let data: any;
-          try {
-            data = await res.json();
-          } catch {
-            // Timeout/risposta non-JSON per QUESTO fornitore: la chiamata è
-            // piccola, quindi è raro, ma se capita saltiamo al prossimo
-            // invece di interrompere tutto il giro.
-            falliti.push(fornitore);
-            continue;
-          }
-          if (!res.ok) {
-            falliti.push(fornitore);
-            continue;
-          }
-
-          totaleTrovate += data.creati?.length ?? 0;
-          if (data.contatori) {
-            residuo = {
-              web: Math.max(0, residuo.web - (data.contatori.web ?? 0)),
-              fisso: Math.max(0, residuo.fisso - (data.contatori.fisso ?? 0)),
-              variabile: Math.max(0, residuo.variabile - (data.contatori.variabile ?? 0))
-            };
-          }
-        } catch {
-          falliti.push(fornitore);
-        }
-      }
-
-      alert(
-        `Ricerca completata: ${totaleTrovate} offerte complete (prezzo+CCV) trovate e inserite come NON ATTIVE.\n` +
-          `Verificale e attivale da Admin prima che compaiano su /mercato.` +
-          (falliti.length > 0 ? `\n\nFalliti/saltati: ${falliti.join(', ')} (puoi rilanciare la ricerca, i fornitori già coperti restano nel database).` : '')
-      );
+      alert(data.messaggio);
       fetch('/api/concorrenti?includiInattive=1').then((r) => r.json()).then(setConcorrenti);
     } finally {
       setSincronizzandoConcorrenti(false);
-      setProgressoConcorrenti(null);
     }
   }
 
@@ -447,45 +340,6 @@ export function AdminClient() {
     setArgomenti((prev) => [...prev, nuovo]);
   }
 
-  function aggiornaTestoDirettiva(id: string, testo: string) {
-    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, testo } : d)));
-  }
-
-  async function salvaTestoDirettiva(id: string) {
-    const d = direttive.find((x) => x.id === id);
-    if (!d) return;
-    await fetch(`/api/direttive/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ testo: d.testo })
-    });
-  }
-
-  async function toggleAttivaDirettiva(id: string, attiva: boolean) {
-    setDirettive((prev) => prev.map((d) => (d.id === id ? { ...d, attiva } : d)));
-    await fetch(`/api/direttive/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attiva })
-    });
-  }
-
-  async function eliminaDirettiva(id: string) {
-    if (!confirm('Eliminare questa direttiva?')) return;
-    await fetch(`/api/direttive/${id}`, { method: 'DELETE' });
-    setDirettive((prev) => prev.filter((d) => d.id !== id));
-  }
-
-  async function aggiungiDirettiva() {
-    const res = await fetch('/api/direttive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ testo: 'Nuova direttiva — modifica questo testo', ordinamento: direttive.length + 1 })
-    });
-    const nuova = await res.json();
-    setDirettive((prev) => [...prev, nuova]);
-  }
-
   const categorie = Array.from(new Set(parametri.map((p) => p.categoria)));
   const tipiArgomento: TipoArgomento[] = ['ENEL_VINCE', 'CONCORRENTE_VARIABILE', 'CONCORRENTE_FISSO', 'GENERALE'];
 
@@ -532,12 +386,6 @@ export function AdminClient() {
           onClick={() => setTab('argomentario')}
         >
           Argomentario ({argomenti.length})
-        </button>
-        <button
-          className={tab === 'caracozzo' ? 'btn-primary text-xs' : 'btn-secondary text-xs'}
-          onClick={() => setTab('caracozzo')}
-        >
-          Caracozzo AI ({direttive.length})
         </button>
         {tab === 'offerte' && (
           <button className="btn-primary text-xs ml-auto" onClick={() => setFormAperto('nuova')}>
@@ -636,8 +484,8 @@ export function AdminClient() {
 
       {tab === 'rete' && (
         <div className="card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
               Componenti ARERA di distribuzione e oneri di sistema (ASOS/ARIM), una riga per fascia di potenza. Gli
               oneri ASOS/ARIM cambiano ogni trimestre con delibera ARERA: aggiornali qui, senza toccare il codice.
               Trasmissione, misura e accisa (comuni a tutte le fasce) sono invece nella tab "Parametri di dettaglio".
@@ -717,24 +565,13 @@ export function AdminClient() {
 
       {tab === 'pun' && (
         <div className="card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
               Valore medio mensile del PUN Index GME (€/MWh), usato nel grafico della pagina pubblica "/mercato".
               Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
               successivo), o correggi valori stimati con quelli ufficiali.
             </p>
-            <div className="flex items-end gap-2 shrink-0">
-              <div>
-                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Mesi da cercare</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={36}
-                  className="input text-xs py-1 px-2 w-16"
-                  value={mesiPun}
-                  onChange={(e) => setMesiPun(Math.max(1, Number(e.target.value) || 1))}
-                />
-              </div>
+            <div className="flex gap-2 shrink-0">
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPunDalWeb} disabled={sincronizzandoPun}>
                 {sincronizzandoPun ? 'Cerco…' : '🔎 Sincronizza da web'}
               </button>
@@ -787,24 +624,13 @@ export function AdminClient() {
 
       {tab === 'psv' && (
         <div className="card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
               Valore medio mensile dell'indice PSV gas (€/Smc), l'equivalente del PUN per il gas, usato nel grafico
               della pagina pubblica "/mercato". Aggiorna qui il mese corrente appena disponibile, o correggi valori
               stimati con quelli ufficiali.
             </p>
-            <div className="flex items-end gap-2 shrink-0">
-              <div>
-                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Mesi da cercare</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={36}
-                  className="input text-xs py-1 px-2 w-16"
-                  value={mesiPsv}
-                  onChange={(e) => setMesiPsv(Math.max(1, Number(e.target.value) || 1))}
-                />
-              </div>
+            <div className="flex gap-2 shrink-0">
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPsvDalWeb} disabled={sincronizzandoPsv}>
                 {sincronizzandoPsv ? 'Cerco…' : '🔎 Sincronizza da web'}
               </button>
@@ -857,72 +683,15 @@ export function AdminClient() {
 
       {tab === 'concorrenza' && (
         <div className="card p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <p className="text-xs text-enel-ink/50 flex-1 min-w-[260px]">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <p className="text-xs text-enel-ink/50">
               Offerte concorrenti indicative, mostrate nella pagina pubblica "/mercato" (solo quelle{' '}
               <strong>attive</strong>). Distingui sempre le offerte "solo web" (canale WEB) dalle altre (canale
               ALTRO), perché non sono condizioni replicabili in trattativa diretta.
-              <br />
-              <span className="text-enel-amber">
-                ⚠️ "Cerca dal web" ora lancia una chiamata separata per ciascuno dei {FORNITORI_RICERCA.length}{' '}
-                fornitori, in sequenza (necessario perché il piano Vercel Hobby limita ogni singola chiamata a
-                ~10 secondi) — quindi la ricerca completa richiede qualche minuto invece di pochi secondi. Solo
-                le offerte con SIA prezzo SIA CCV trovati vengono salvate.
-              </span>
             </p>
-            {progressoConcorrenti && (
-              <div className="flex items-center gap-2 rounded-lg border border-enel-navy/30 bg-enel-navy/5 px-3 py-2 mb-3">
-                <span
-                  className="inline-block w-3.5 h-3.5 rounded-full border-2 border-enel-navy/30 border-t-enel-navy animate-spin"
-                  aria-hidden="true"
-                />
-                <span className="text-xs font-medium text-enel-navy">{progressoConcorrenti}</span>
-              </div>
-            )}
-            <div className="flex items-end gap-2 shrink-0">
-              <div>
-                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Web (0 = nessuna)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="input text-xs py-1 px-2 w-16"
-                  value={contiConcorrenti.web}
-                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, web: Math.max(0, Number(e.target.value) || 0) }))}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Prezzo fisso</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="input text-xs py-1 px-2 w-16"
-                  value={contiConcorrenti.fisso}
-                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, fisso: Math.max(0, Number(e.target.value) || 0) }))}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-enel-ink/50 block mb-0.5">Prezzo variabile</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="input text-xs py-1 px-2 w-16"
-                  value={contiConcorrenti.variabile}
-                  onChange={(e) => setContiConcorrenti((c) => ({ ...c, variabile: Math.max(0, Number(e.target.value) || 0) }))}
-                />
-              </div>
+            <div className="flex gap-2 shrink-0">
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={cercaConcorrentiDalWeb} disabled={sincronizzandoConcorrenti}>
-                {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web (a pagamento)'}
-              </button>
-              <button
-                className="btn-secondary text-xs whitespace-nowrap"
-                onClick={testaAccessoOpenData}
-                disabled={testandoOpenData}
-                title="Nessuna chiamata IA, nessun costo: prova solo a leggere i dati open data ufficiali ARERA"
-              >
-                {testandoOpenData ? 'Provo…' : '🧪 Testa Open Data ARERA (gratis)'}
+                {sincronizzandoConcorrenti ? 'Cerco…' : '🔎 Cerca dal web'}
               </button>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiConcorrente}>
                 + Aggiungi offerta
@@ -932,37 +701,8 @@ export function AdminClient() {
           <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
             "Cerca dal web" chiede a Claude di trovare offerte pubbliche online (consuma credito Anthropic): i
             risultati entrano <strong>non attivi</strong> e non compaiono su "/mercato" finché non li controlli e
-            spunti "Attiva". "Testa Open Data ARERA" è invece gratuito: prova solo a leggere i dati aperti
-            ufficiali di ilportaleofferte.it, senza IA — se funziona, costruiamo un importer a costo zero al posto
-            della ricerca a pagamento.
+            spunti "Attiva".
           </p>
-          {risultatoOpenData && (
-            <div className="rounded-lg border border-enel-line bg-enel-paper p-3 mb-4 text-xs">
-              <div className="font-semibold mb-1">
-                {risultatoOpenData.ok ? '✅ Accesso riuscito' : '❌ Accesso fallito'}
-                {risultatoOpenData.status && ` (status ${risultatoOpenData.status})`}
-              </div>
-              {risultatoOpenData.errore && <div className="text-red-600 mb-2">{risultatoOpenData.errore}</div>}
-              {risultatoOpenData.linkCsvTrovati?.length > 0 && (
-                <div className="mb-2">
-                  <div className="text-enel-ink/60 mb-1">File CSV trovati nella pagina:</div>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    {risultatoOpenData.linkCsvTrovati.map((l: string, i: number) => (
-                      <li key={i} className="break-all">{l}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {risultatoOpenData.anteprimaContenuto && (
-                <details>
-                  <summary className="cursor-pointer text-enel-ink/60">Anteprima contenuto pagina (primi 3000 caratteri)</summary>
-                  <pre className="whitespace-pre-wrap break-all bg-white border border-enel-line rounded p-2 mt-1 max-h-64 overflow-auto">
-                    {risultatoOpenData.anteprimaContenuto}
-                  </pre>
-                </details>
-              )}
-            </div>
-          )}
           <div className="space-y-3">
             {concorrenti.map((c) => {
               const oggi = new Date().toISOString().slice(0, 10);
@@ -1142,57 +882,6 @@ export function AdminClient() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {tab === 'caracozzo' && (
-        <div className="space-y-4">
-          <div className="card p-5">
-            <div className="text-sm font-semibold mb-1">✍️ Direttive per Caracozzo AI</div>
-            <p className="text-xs text-enel-ink/50 mb-4">
-              Cosa deve toccare ogni script di vendita generato nella pagina "Confronto concorrenza" (il pulsante
-              "Genera script"). Ogni direttiva è una frase in italiano semplice: l'IA le incorpora nel discorso
-              naturale, senza elencarle come una lista. Ordine, tono e lunghezza restano gestiti automaticamente —
-              qui controlli solo i CONTENUTI che lo script deve toccare. Esempi di direttive che puoi aggiungere:
-              "Se il prezzo Enel è più alto di quello attuale del cliente, invita comunque a restare in contatto:
-              lo avviserai appena ci sarà un'offerta più conveniente", oppure "Proponiti sempre come punto di
-              riferimento anche per l'altra commodity (luce/gas) se il cliente non ce l'ha già con noi".
-            </p>
-            <div className="space-y-3">
-              {direttive
-                .slice()
-                .sort((a, b) => a.ordinamento - b.ordinamento)
-                .map((d) => (
-                  <div key={d.id} className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={d.attiva}
-                      onChange={(e) => toggleAttivaDirettiva(d.id, e.target.checked)}
-                      className="mt-2"
-                      title="Attiva"
-                    />
-                    <textarea
-                      className={`input flex-1 ${!d.attiva ? 'opacity-40' : ''}`}
-                      rows={2}
-                      value={d.testo}
-                      onChange={(e) => aggiornaTestoDirettiva(d.id, e.target.value)}
-                      onBlur={() => salvaTestoDirettiva(d.id)}
-                    />
-                    <button className="text-xs text-red-600 hover:underline mt-2" onClick={() => eliminaDirettiva(d.id)}>
-                      Elimina
-                    </button>
-                  </div>
-                ))}
-              {direttive.length === 0 && (
-                <div className="text-xs text-enel-ink/40">
-                  Nessuna direttiva configurata: lo script userà un tono generico basato solo sui dati numerici.
-                </div>
-              )}
-            </div>
-            <button className="btn-secondary text-xs mt-3" onClick={aggiungiDirettiva}>
-              + Aggiungi direttiva
-            </button>
-          </div>
         </div>
       )}
 

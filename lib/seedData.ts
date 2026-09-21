@@ -1,6 +1,5 @@
 import { Commodity, TipoPrezzo } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
-import { ZONE_GAS, ZONA_GAS_DEFAULT, slugZonaGas } from './zoneGas';
 
 /**
  * Offerte ricostruite dal foglio "Import SharePoint" del tuo file Excel
@@ -198,46 +197,7 @@ export const PARAMETRI_SEED: Prisma.ParametroDettaglioCreateManyInput[] = [
   { chiave: 'MISURA_LUCE_ANNO', etichetta: 'Tariffa misura', categoria: 'Rete e oneri (comuni a tutte le fasce)', commodity: Commodity.LUCE, valore: 19.6826, unita: '€/POD/anno', ordinamento: 2 },
   { chiave: 'ACCISA_GAS_SMC', etichetta: 'Accisa gas', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 0, unita: '€/Smc', ordinamento: 1 },
   { chiave: 'IVA_PERC_GAS', etichetta: 'IVA', categoria: 'Accise e IVA', commodity: Commodity.GAS, valore: 22, unita: '%', ordinamento: 2 },
-  { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 },
-  ...ZONE_GAS.flatMap((zona, i): Prisma.ParametroDettaglioCreateManyInput[] => {
-    const slug = slugZonaGas(zona);
-    // Solo "Nord Orientale" ha valori reali (presi da una bolletta Bluenergy
-    // verificata, cliente in Veneto). Le altre 5 zone sono lasciate a 0 e
-    // marcate esplicitamente "da verificare": vanno compilate da Admin coi
-    // valori ufficiali ARERA della zona (tariffe di distribuzione, misura e
-    // oneri generali) prima di usarle per un confronto reale.
-    const daVerificare = zona !== ZONA_GAS_DEFAULT;
-    const suffix = daVerificare ? ' (⚠️ da verificare)' : '';
-    return [
-      {
-        chiave: `GAS_TRASPORTO_FISSO_${slug}`,
-        etichetta: `Quota fissa trasporto — ${zona}${suffix}`,
-        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
-        commodity: Commodity.GAS,
-        valore: daVerificare ? 0 : 40.6125,
-        unita: '€/fattura',
-        ordinamento: 10 + i * 3
-      },
-      {
-        chiave: `GAS_TRASPORTO_VARIABILE_${slug}`,
-        etichetta: `Quota variabile trasporto — ${zona} (⚠️ da verificare, manca in tutte le zone)`,
-        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
-        commodity: Commodity.GAS,
-        valore: 0,
-        unita: '€/Smc',
-        ordinamento: 11 + i * 3
-      },
-      {
-        chiave: `GAS_ONERI_FISSO_${slug}`,
-        etichetta: `Quota fissa oneri di sistema — ${zona}${suffix}`,
-        categoria: 'Trasporto e oneri di sistema (per zona ARERA)',
-        commodity: Commodity.GAS,
-        valore: daVerificare ? 0 : -1.8025,
-        unita: '€/fattura',
-        ordinamento: 12 + i * 3
-      }
-    ];
-  })
+  { chiave: 'ALTRE_VOCI_GAS', etichetta: 'Altre voci (una tantum, es. solleciti)', categoria: 'Altre voci', commodity: Commodity.GAS, valore: 0, unita: '€/fattura', ordinamento: 3 }
 ];
 
 /**
@@ -314,35 +274,6 @@ export const ARGOMENTI_SEED: Prisma.ArgomentoVenditaCreateManyInput[] = [
   { tipo: 'GENERALE', testo: 'Un solo fornitore per luce e gas semplifica gestione, fatturazione e assistenza.', ordinamento: 11 },
   { tipo: 'GENERALE', testo: 'Verifica se sono attive promozioni o vantaggi dedicati ai clienti Enel SMB per questo periodo (non inclusi in questo calcolo).', ordinamento: 12 },
   { tipo: 'GENERALE', testo: 'Solidità di un operatore storico: minore rischio di disservizi o cambi di condizioni improvvisi.', ordinamento: 13 }
-];
-
-/**
- * Direttive di contenuto per "Caracozzo AI" (generatore script di vendita),
- * editabili da Admin senza toccare il codice. Queste 4 sono esattamente
- * quelle che il prompt seguiva già in modo fisso (hardcoded) prima di
- * diventare configurabili: partendo da qui puoi modificarle, disattivarle o
- * aggiungerne altre (es. "se il prezzo Enel è più alto, invita comunque il
- * cliente a restare in contatto per future offerte migliori").
- */
-export const DIRETTIVE_SCRIPT_SEED: Prisma.DirettivaScriptCreateManyInput[] = [
-  {
-    testo: 'Se fornito nei dati, menziona il risparmio concreto stimato per il cliente.',
-    ordinamento: 1
-  },
-  {
-    testo:
-      "Fondamentale in ogni script: presentati come il consulente dedicato del cliente da oggi in poi, non solo chi vende questa offerta una tantum. Chi seguirà le sue forniture nel tempo, proponendo la soluzione più adatta in base ai consumi reali, disponibile quando serve.",
-    ordinamento: 2
-  },
-  {
-    testo:
-      'Un accenno naturale e breve alla solidità del marchio Enel (grande gruppo affermato, presenza consolidata, assistenza affidabile) — non una lista di caratteristiche tecniche.',
-    ordinamento: 3
-  },
-  {
-    testo: 'Chiudi lo script con un invito naturale a procedere.',
-    ordinamento: 4
-  }
 ];
 
 /**

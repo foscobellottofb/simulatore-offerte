@@ -18,7 +18,6 @@ unico documento, non come bollette separate.
 Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
 
 {
-  "commodity": "LUCE" | "GAS" | null,
   "prezzoKwhLuce": number | null,
   "prezzoKwhGas": number | null,
   "ccvMensile": number | null,
@@ -33,7 +32,7 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
   "citta": string | null,
   "codiceFiscalePiva": string | null,
   "confidenza": "alta" | "media" | "bassa",
-  "note": [{ "etichetta": string, "testo": string }] | null,
+  "note": string | null,
   "costiExtra": [
     { "descrizione": string, "importo": number | null, "tipo": "una_tantum" | "ricorrente_extra" }
   ],
@@ -41,24 +40,11 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
 }
 
 Regole:
-- "commodity": "LUCE" se la bolletta è di energia elettrica, "GAS" se è di gas naturale. Deducilo dal tipo
-  di documento (es. presenza di kWh/POD per luce, Smc/PDR per gas). Se il documento contiene entrambe le
-  commodity (bolletta dual fuel), usa quella prevalente/principale e spiegalo in "note".
 - "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della SOLA materia energia in €/kWh (o €/Smc per
   il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
   orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo e
-  spiegalo in "note". Se l'offerta è a prezzo variabile legato a un indice (es. "PSV + Spread") SENZA che
-  la bolletta indichi un valore numerico fisso applicato, e/o il consumo del periodo è 0 (quindi non è
-  calcolabile nemmeno indirettamente dall'importo fatturato), usa null e spiegalo chiaramente in "note"
-  (es. "prezzo non determinabile: formula a indice variabile, nessun consumo nel periodo per ricavarlo
-  indirettamente").
-- "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente. ATTENZIONE:
-  in molte bollette gas compaiono DUE voci diverse chiamate entrambe "quota fissa": una nella sezione
-  "vendita/materia prima" (spesso etichettata QVD, CCV, o "quota fissa di vendita" — QUESTA è ccvMensile) e
-  una nella sezione "trasporto/distribuzione/rete" (spesso "quota fissa trasporto" o "quota fissa di
-  distribuzione" — questa NON è ccvMensile, non includerla). Se vedi più righe "quota fissa", prendi solo
-  quella dentro la sezione di vendita/offerta commerciale (di solito la più piccola delle due, e vicina al
-  nome dell'offerta/fornitore), mai quella di trasporto/rete/distribuzione.
+  spiegalo in "note".
+- "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
 - "consumoKwh": il consumo del periodo fatturato in kWh (elettricità) o Smc (gas) — quello effettivamente
   fatturato in questa bolletta, non un consumo annuo stimato. Se ci sono più fasce (F1/F2/F3), usa il
@@ -86,11 +72,6 @@ Regole:
   altra cosa un consulente dovrebbe sapere prima di usare questi dati per un confronto. Se non trovi
   nulla di rilevante oltre ai dati base, dillo esplicitamente ("Nessun costo extra rilevato oltre alla
   normale struttura tariffaria.").
-- "note": elenco di punti BREVI e DISTINTI (non un paragrafo unico che mescola più argomenti). Ogni
-  elemento ha una "etichetta" di 2-4 parole (es. "Formula prezzo", "Consumo storico", "Tipo cliente",
-  "Periodo economico") e un "testo" di massimo una frase. Un punto = un argomento: se stai per scrivere
-  "e inoltre" o unire due informazioni diverse con una virgola, dividile in due punti separati invece.
-  Massimo 5 punti. Se non c'è nulla da segnalare oltre ai dati base, usa null (non un array vuoto).
 - Se un valore non è leggibile o non è presente, usa null. Non inventare numeri né dati anagrafici.`;
 
 export async function POST(req: NextRequest) {

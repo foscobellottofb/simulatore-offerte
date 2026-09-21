@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita, OffertaConcorrente } from '@/lib/types';
+import { Offerta, ParametroDettaglio, FasciaRete, Commodity, ArgomentoVendita } from '@/lib/types';
 import { calcolaTutteLeOfferte, calcolaConcorrente } from '@/lib/calcoli';
-import { ZONE_GAS, ZONA_GAS_DEFAULT } from '@/lib/zoneGas';
 import { Argomentario } from '@/components/Argomentario';
 import { AiutoCampo } from '@/components/AiutoCampo';
 import { leggiPersistito, scriviPersistito } from '@/lib/persistiCampi';
@@ -19,7 +18,6 @@ interface DatiClienteSalvati {
   consumoKwh: number | '';
   potenzaKw: number | '';
   giorniFattura: number | '';
-  zonaGas: string;
   nomeCliente: string;
   pod: string;
   indirizzoFornitura: string;
@@ -46,7 +44,6 @@ export function ConcorrenzaClient() {
   const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
   const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
   const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
-  const [zonaGas, setZonaGas] = useState<string>(salvati.zonaGas ?? ZONA_GAS_DEFAULT);
   const [nomeCliente, setNomeCliente] = useState(salvati.nomeCliente ?? '');
   const [pod, setPod] = useState(salvati.pod ?? '');
   const [codiceFiscalePiva, setCodiceFiscalePiva] = useState(salvati.codiceFiscalePiva ?? '');
@@ -73,14 +70,13 @@ export function ConcorrenzaClient() {
       consumoKwh,
       potenzaKw,
       giorniFattura,
-      zonaGas,
       nomeCliente,
       pod,
       indirizzoFornitura,
       citta,
       codiceFiscalePiva
     });
-  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, zonaGas, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
+  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
   useEffect(() => {
     scriviPersistito('simulotto:concorrente', { prezzoKwh, ccv, tipoPrezzoConcorrente, totaleDichiarato, nomeFornitore });
@@ -90,11 +86,8 @@ export function ConcorrenzaClient() {
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
   const [fasceRete, setFasceRete] = useState<FasciaRete[]>([]);
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
-  const [concorrentiMercato, setConcorrentiMercato] = useState<OffertaConcorrente[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
-  const [confidenzaOcr, setConfidenzaOcr] = useState<'alta' | 'media' | 'bassa' | null>(null);
-  const [noteStrutturate, setNoteStrutturate] = useState<{ etichetta: string; testo: string }[] | null>(null);
   const [analisiIA, setAnalisiIA] = useState<string | null>(null);
   const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
 
@@ -123,14 +116,12 @@ export function ConcorrenzaClient() {
       fetch('/api/offerte').then((r) => r.json()),
       fetch('/api/parametri').then((r) => r.json()),
       fetch('/api/argomenti').then((r) => r.json()),
-      fetch('/api/fasce-rete').then((r) => r.json()),
-      fetch('/api/concorrenti').then((r) => r.json())
-    ]).then(([o, p, a, f, c]) => {
+      fetch('/api/fasce-rete').then((r) => r.json())
+    ]).then(([o, p, a, f]) => {
       setOfferte(o);
       setParametri(p);
       setArgomenti(a);
       setFasceRete(f);
-      setConcorrentiMercato(c);
     });
   }, []);
 
@@ -140,7 +131,6 @@ export function ConcorrenzaClient() {
     tipoConsumo,
     potenzaKw: potenzaKw === '' ? 0 : potenzaKw,
     giorniFattura: giorniFattura === '' ? 0 : giorniFattura,
-    zonaGas,
     percentualeConsumoF2: 20,
     percentualeConsumoF3: 0
   };
@@ -158,7 +148,7 @@ export function ConcorrenzaClient() {
       if (trovata) return trovata;
     }
     return risultati[0];
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
 
   const usaOffertaConfermata = useMemo(() => {
     if (typeof window === 'undefined' || !migliorEnel) return false;
@@ -168,53 +158,17 @@ export function ConcorrenzaClient() {
   const risultatoConcorrente = useMemo(() => {
     if (prezzoKwh === '' || ccv === '' || parametri.length === 0) return null;
     return calcolaConcorrente(Number(prezzoKwh), Number(ccv), input, parametri, fasceRete);
-  }, [prezzoKwh, ccv, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
+  }, [prezzoKwh, ccv, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura]);
 
   const deltaPeriodo = useMemo(() => {
     if (!migliorEnel || !risultatoConcorrente) return null;
     return risultatoConcorrente.totaleBolletta - migliorEnel.totaleBolletta;
   }, [migliorEnel, risultatoConcorrente]);
 
-  // Differenza tra quanto calcoliamo noi (prezzo + CCV inseriti) e il totale
-  // che il cliente ha effettivamente pagato: se è alta, in bolletta ci sono
-  // probabilmente altre voci (extra, arretrati, penali...) non riflesse nei
-  // due soli campi "prezzo" e "CCV" che abbiamo inserito qui.
-  const scartoTotaleDichiarato = useMemo(() => {
-    if (!risultatoConcorrente || totaleDichiarato === '') return null;
-    return risultatoConcorrente.totaleBolletta - Number(totaleDichiarato);
-  }, [risultatoConcorrente, totaleDichiarato]);
-
-  const SOGLIA_SCARTO_SIGNIFICATIVO = 2; // €, oltre il quale segnaliamo un possibile disallineamento
-  const scartoSignificativo =
-    scartoTotaleDichiarato !== null && Math.abs(scartoTotaleDichiarato) > SOGLIA_SCARTO_SIGNIFICATIVO;
-
   const risparmioAnnuo = useMemo(() => {
     if (deltaPeriodo === null || !giorniFattura) return null;
     return deltaPeriodo * (365 / giorniFattura);
   }, [deltaPeriodo, giorniFattura]);
-
-  // Righe aggiuntive: simula il consumo di QUESTO cliente con i prezzi dei
-  // competitor censiti in "Mercato dell'energia", escludendo quelli
-  // disponibili solo via canale WEB (spesso promozioni non replicabili
-  // porta a porta). Riusa calcolaConcorrente, la stessa funzione usata sopra
-  // per il concorrente inserito manualmente.
-  const simulazioniMercato = useMemo(() => {
-    if (parametri.length === 0) return [];
-    return concorrentiMercato
-      .filter(
-        (c) =>
-          c.attiva &&
-          c.canale !== 'WEB' &&
-          c.commodity === commodity &&
-          c.prezzoKwh != null &&
-          c.ccvMensile != null
-      )
-      .map((c) => ({
-        concorrente: c,
-        risultato: calcolaConcorrente(c.prezzoKwh as number, c.ccvMensile as number, input, parametri, fasceRete)
-      }))
-      .sort((a, b) => a.risultato.totaleBolletta - b.risultato.totaleBolletta);
-  }, [concorrentiMercato, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas]);
 
   const LIMITE_FILE_MB = 4;
   const LIMITE_FILE_TOTALE_MB = 8;
@@ -258,8 +212,6 @@ export function ConcorrenzaClient() {
 
     setOcrStato('analisi');
     setOcrNote(null);
-    setConfidenzaOcr(null);
-    setNoteStrutturate(null);
 
     try {
       const pagine = await Promise.all(
@@ -293,24 +245,14 @@ export function ConcorrenzaClient() {
         setOcrNote(data.error ?? `Estrazione non riuscita (status ${res.status}).`);
         return;
       }
-      // Usa il commodity RILEVATO dall'OCR (non quello ancora nello state, che
-      // potrebbe essere rimasto sul valore precedente) sia per popolare il
-      // toggle in UI sia per scegliere quale prezzo (luce/gas) leggere.
-      const commodityRilevata = data.commodity === 'GAS' ? 'GAS' : data.commodity === 'LUCE' ? 'LUCE' : commodity;
-      if (data.commodity === 'LUCE' || data.commodity === 'GAS') setCommodity(data.commodity);
-
-      const prezzo = commodityRilevata === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
-      // IMPORTANTE: uso "!= null" (non "if (valore)") perché 0 è un valore
-      // legittimo qui (es. consumo 0 Smc in bolletta) e "if (0)" è falso in
-      // JavaScript: con "if (valore)" un vero 0 letto dalla bolletta veniva
-      // scartato silenziosamente, lasciando nel campo il valore precedente.
-      if (prezzo != null) setPrezzoKwh(prezzo);
-      if (data.ccvMensile != null) setCcv(data.ccvMensile);
-      if (data.totaleBolletta != null) setTotaleDichiarato(data.totaleBolletta);
+      const prezzo = commodity === 'LUCE' ? data.prezzoKwhLuce : data.prezzoKwhGas;
+      if (prezzo) setPrezzoKwh(prezzo);
+      if (data.ccvMensile) setCcv(data.ccvMensile);
+      if (data.totaleBolletta) setTotaleDichiarato(data.totaleBolletta);
       if (data.fornitore) setNomeFornitore(data.fornitore);
-      if (data.consumoKwh != null) setConsumoKwh(data.consumoKwh);
-      if (data.potenzaKw != null) setPotenzaKw(data.potenzaKw);
-      if (data.giorniFattura != null) {
+      if (data.consumoKwh) setConsumoKwh(data.consumoKwh);
+      if (data.potenzaKw) setPotenzaKw(data.potenzaKw);
+      if (data.giorniFattura) {
         setGiorniFattura(data.giorniFattura);
         setTipoConsumo('PERIODO');
       }
@@ -322,8 +264,11 @@ export function ConcorrenzaClient() {
       setAnalisiIA(data.analisi ?? null);
       setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
       setOcrStato('ok');
-      setConfidenzaOcr(data.confidenza ?? null);
-      setNoteStrutturate(Array.isArray(data.note) && data.note.length > 0 ? data.note : null);
+      if (data.confidenza !== 'alta' || data.note) {
+        setOcrNote(
+          `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
+        );
+      }
     } catch (err) {
       setOcrStato('errore');
       setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
@@ -356,17 +301,11 @@ export function ConcorrenzaClient() {
         body: JSON.stringify({
           nomeCliente,
           commodity,
-          zonaGas: commodity === 'GAS' ? zonaGas : undefined,
-          citta,
-          consumoKwh: consumoKwh === '' ? undefined : consumoKwh,
-          giorniFattura: giorniFattura === '' ? undefined : giorniFattura,
           offertaNome: migliorEnel.offerta.nome,
           fornitoreConcorrente: nomeFornitore,
-          tipoPrezzoConcorrente,
           totaleEnel: migliorEnel.totaleBolletta,
           totaleConcorrente: risultatoConcorrente.totaleBolletta,
           risparmioAnnuo,
-          costiExtraRilevati: costiExtra.length > 0 ? costiExtra.map((c) => c.descrizione).join('; ') : undefined,
           nomeConsulente
         })
       });
@@ -453,22 +392,6 @@ export function ConcorrenzaClient() {
                   />
                 </div>
               )}
-              {commodity === 'GAS' && (
-                <div>
-                  <label className="label">
-                    Zona tariffaria gas
-                    <AiutoCampo testo="Le tariffe di trasporto/distribuzione gas ARERA variano per zona geografica (a differenza della luce). Solo 'Nord Orientale' ha valori verificati da una bolletta reale; le altre zone vanno compilate da Admin → Dati e parametri prima di usarle per un confronto affidabile." />
-                  </label>
-                  <select className="input" value={zonaGas} onChange={(e) => setZonaGas(e.target.value)}>
-                    {ZONE_GAS.map((z) => (
-                      <option key={z} value={z}>
-                        {z}
-                        {z !== ZONA_GAS_DEFAULT ? ' (da verificare)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div>
                 <label className="label">Nome cliente (per PDF)</label>
                 <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
@@ -491,49 +414,7 @@ export function ConcorrenzaClient() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-enel-line mb-3">
-              <div className="font-medium text-sm">Bolletta concorrente</div>
-              <button
-                type="button"
-                className="text-xs text-enel-ink/60 hover:text-enel-ink underline"
-                title="Azzera anche i dati cliente (commodity, consumo, nome, POD, indirizzo...): sono condivisi con la pagina Simulatore offerte."
-                onClick={() => {
-                  const confermato = window.confirm(
-                    'Resettare TUTTI i dati di questo cliente (commodity, consumo, nome, POD, indirizzo, e i dati del concorrente)?\n\n' +
-                      'Questi dati sono condivisi con la pagina "Simulatore offerte": verranno azzerati anche lì.'
-                  );
-                  if (!confermato) return;
-
-                  // Dati cliente (condivisi con "Simulatore offerte" tramite lo stesso storage)
-                  setCommodity('LUCE');
-                  setTipoConsumo('PERIODO');
-                  setConsumoKwh(397);
-                  setPotenzaKw(3);
-                  setGiorniFattura(60);
-                  setZonaGas(ZONA_GAS_DEFAULT);
-                  setNomeCliente('');
-                  setPod('');
-                  setIndirizzoFornitura('');
-                  setCitta('');
-                  setCodiceFiscalePiva('');
-
-                  // Dati del concorrente (solo di questa pagina)
-                  setPrezzoKwh('');
-                  setCcv('');
-                  setTipoPrezzoConcorrente('FISSO');
-                  setTotaleDichiarato('');
-                  setNomeFornitore('');
-                  setAnalisiIA(null);
-                  setCostiExtra([]);
-                  setOcrStato('idle');
-                  setOcrNote(null);
-                  setConfidenzaOcr(null);
-                  setNoteStrutturate(null);
-                }}
-              >
-                Resetta tutti i valori
-              </button>
-            </div>
+            <div className="font-medium text-sm mb-3 pt-3 border-t border-enel-line">Bolletta concorrente</div>
 
             <label className="label">
               Foto o PDF bolletta (opzionale, precompila i campi e analizza eventuali costi extra)
@@ -598,28 +479,7 @@ export function ConcorrenzaClient() {
                 </span>
               </div>
             )}
-            {ocrStato === 'ok' && (confidenzaOcr !== 'alta' || noteStrutturate) && (
-              <div className="rounded-lg border border-enel-amber/30 bg-enel-amber/5 mb-2 overflow-hidden">
-                {confidenzaOcr && confidenzaOcr !== 'alta' && (
-                  <div className="flex justify-between items-center px-3 py-1.5 text-xs border-b border-enel-amber/20">
-                    <span className="text-enel-ink/60">Confidenza lettura</span>
-                    <span className="font-semibold text-enel-amber capitalize">{confidenzaOcr}</span>
-                  </div>
-                )}
-                {noteStrutturate?.map((n, i) => (
-                  <div
-                    key={i}
-                    className={`flex gap-3 px-3 py-1.5 text-xs ${i > 0 ? 'border-t border-enel-amber/20' : ''}`}
-                  >
-                    <span className="text-enel-ink/60 font-medium shrink-0 w-32">{n.etichetta}</span>
-                    <span className="text-enel-ink/80">{n.testo}</span>
-                  </div>
-                ))}
-                <div className="px-3 py-1.5 text-xs text-enel-ink/50 border-t border-enel-amber/20">
-                  Controlla i valori prima di confermare.
-                </div>
-              </div>
-            )}
+            {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
 
             {ocrStato === 'ok' && (analisiIA || costiExtra.length > 0) && (
@@ -740,34 +600,11 @@ export function ConcorrenzaClient() {
                     </div>
                   )}
 
-                  {totaleDichiarato !== '' && scartoTotaleDichiarato !== null && (
-                    <div className="text-xs text-enel-ink/50 mb-2">
-                      Scarto dal totale dichiarato in bolletta: <span className="font-medium">{euro(scartoTotaleDichiarato)}</span>{' '}
+                  {totaleDichiarato !== '' && (
+                    <div className="text-xs text-enel-ink/50 mb-4">
+                      Scarto dal totale dichiarato in bolletta:{' '}
+                      <span className="font-medium">{euro(risultatoConcorrente.totaleBolletta - Number(totaleDichiarato))}</span>{' '}
                       — utile per verificare la coerenza dei dati inseriti.
-                    </div>
-                  )}
-
-                  {scartoSignificativo && costiExtra.length > 0 && (
-                    <div className="rounded-lg border border-enel-amber/40 bg-enel-amber/10 p-3 mb-4">
-                      <div className="text-xs font-semibold text-enel-amber mb-1.5">
-                        ⚠️ Altre voci in fattura — spiegano parte dello scarto
-                      </div>
-                      <div className="space-y-1">
-                        {costiExtra.map((c, i) => (
-                          <div key={i} className="flex justify-between items-baseline text-xs">
-                            <span className="text-enel-ink/70">
-                              {c.tipo === 'una_tantum' ? '🕐 Una tantum' : '➕ Ricorrente extra'} — {c.descrizione}
-                            </span>
-                            {c.importo != null && <span className="font-medium">{c.importo.toFixed(2)} €</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {scartoSignificativo && costiExtra.length === 0 && (
-                    <div className="text-xs text-enel-amber mb-4">
-                      ⚠️ Lo scarto dal totale dichiarato è superiore a {SOGLIA_SCARTO_SIGNIFICATIVO}€: in bolletta
-                      potrebbero esserci altre voci non rilevate automaticamente — controlla il documento originale.
                     </div>
                   )}
 
@@ -786,38 +623,6 @@ export function ConcorrenzaClient() {
               )}
             </div>
           </div>
-
-          {migliorEnel && simulazioniMercato.length > 0 && (
-            <div className="card p-4">
-              <div className="text-sm font-semibold mb-1">📊 Confronto con il mercato (stessi consumi del cliente)</div>
-              <p className="text-xs text-enel-ink/50 mb-2">
-                Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'} e CCV presi da "Mercato dell'energia" (esclusi i canali
-                solo web), applicati ai consumi di {nomeCliente || 'questo cliente'} inseriti qui sopra. Per le
-                offerte a prezzo <strong>variabile</strong>, il valore censito deve essere il prezzo PIENO stimato
-                al momento del censimento (spread + indice all'ingrosso già sommati a mano) — verifica in Admin →
-                Concorrenza che sia aggiornato, dato che il mercato si muove nel tempo.
-              </p>
-              <div className="space-y-1">
-                <div className="flex justify-between items-center text-sm px-2 py-1.5 rounded bg-enel-navy/5 font-medium">
-                  <span>Enel — {migliorEnel.offerta.nome}</span>
-                  <span>{euro(migliorEnel.totaleBolletta)}</span>
-                </div>
-                {simulazioniMercato.map(({ concorrente, risultato }) => (
-                  <div key={concorrente.id} className="flex justify-between items-center text-sm px-2 py-1.5 rounded hover:bg-enel-ink/5">
-                    <span className="text-enel-ink/70">
-                      {concorrente.fornitore} — {concorrente.nomeOfferta}
-                      <span className="text-[10px] text-enel-ink/40 ml-1">
-                        ({concorrente.tipoPrezzo === 'VARIABILE' ? 'variabile' : 'fisso'})
-                      </span>
-                    </span>
-                    <span className={risultato.totaleBolletta < migliorEnel.totaleBolletta ? 'text-enel-amber font-medium' : ''}>
-                      {euro(risultato.totaleBolletta)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {migliorEnel && risultatoConcorrente && (
             <Argomentario

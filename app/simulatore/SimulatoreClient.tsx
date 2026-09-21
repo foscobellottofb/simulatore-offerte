@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Offerta, ParametroDettaglio, FasciaRete, RisultatoCalcolo, Commodity } from '@/lib/types';
 import { calcolaTutteLeOfferte } from '@/lib/calcoli';
-import { ZONE_GAS, ZONA_GAS_DEFAULT } from '@/lib/zoneGas';
 import { AiutoCampo } from '@/components/AiutoCampo';
 import { leggiPersistito, scriviPersistito } from '@/lib/persistiCampi';
 
@@ -20,7 +19,6 @@ interface DatiClienteSalvati {
   consumoKwh: number | '';
   potenzaKw: number | '';
   giorniFattura: number | '';
-  zonaGas: string;
   nomeCliente: string;
   pod: string;
   indirizzoFornitura: string;
@@ -36,7 +34,6 @@ export function SimulatoreClient() {
   const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
   const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
   const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
-  const [zonaGas, setZonaGas] = useState<string>(salvati.zonaGas ?? ZONA_GAS_DEFAULT);
   const [percentualeConsumoF2, setPercentualeConsumoF2] = useState(20);
   const [percentualeConsumoF3, setPercentualeConsumoF3] = useState(0);
 
@@ -59,14 +56,13 @@ export function SimulatoreClient() {
       consumoKwh,
       potenzaKw,
       giorniFattura,
-      zonaGas,
       nomeCliente,
       pod,
       indirizzoFornitura,
       citta,
       codiceFiscalePiva
     });
-  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, zonaGas, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
+  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
 
   useEffect(() => {
     Promise.all([
@@ -87,7 +83,6 @@ export function SimulatoreClient() {
     tipoConsumo,
     potenzaKw: potenzaKw === '' ? 0 : potenzaKw,
     giorniFattura: giorniFattura === '' ? 0 : giorniFattura,
-    zonaGas,
     percentualeConsumoF2,
     percentualeConsumoF3
   };
@@ -95,7 +90,7 @@ export function SimulatoreClient() {
   const risultati: RisultatoCalcolo[] = useMemo(() => {
     if (loading) return [];
     return calcolaTutteLeOfferte(offerte, input, parametri, fasceRete);
-  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, zonaGas, percentualeConsumoF2, percentualeConsumoF3, loading]);
+  }, [offerte, parametri, fasceRete, commodity, consumoKwh, tipoConsumo, potenzaKw, giorniFattura, percentualeConsumoF2, percentualeConsumoF3, loading]);
 
   // I campi "quota consumo in F2/F3" hanno senso solo se almeno un'offerta
   // disponibile (es. "Ore Happy") ha davvero più fasce di prezzo.
@@ -180,22 +175,6 @@ export function SimulatoreClient() {
                 value={potenzaKw}
                 onChange={(e) => setPotenzaKw(e.target.value === '' ? '' : Number(e.target.value))}
               />
-            </div>
-          )}
-          {commodity === 'GAS' && (
-            <div>
-              <label className="label">
-                Zona tariffaria gas
-                <AiutoCampo testo="Le tariffe di trasporto/distribuzione gas ARERA variano per zona geografica. Solo 'Nord Orientale' ha valori verificati; le altre vanno compilate da Admin prima di usarle per un confronto affidabile." />
-              </label>
-              <select className="input" value={zonaGas} onChange={(e) => setZonaGas(e.target.value)}>
-                {ZONE_GAS.map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                    {z !== ZONA_GAS_DEFAULT ? ' (da verificare)' : ''}
-                  </option>
-                ))}
-              </select>
             </div>
           )}
           <div>
