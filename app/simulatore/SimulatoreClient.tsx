@@ -25,6 +25,8 @@ interface DatiClienteSalvati {
   indirizzoFornitura: string;
   citta: string;
   codiceFiscalePiva: string;
+  percentualiF2: Record<string, number>;
+  percentualiF3: Record<string, number>;
 }
 
 export function SimulatoreClient() {
@@ -36,8 +38,8 @@ export function SimulatoreClient() {
   const [consumoKwh, setConsumoKwh] = useState<number | ''>(salvati.consumoKwh ?? 397);
   const [potenzaKw, setPotenzaKw] = useState<number | ''>(salvati.potenzaKw ?? 3);
   const [giorniFattura, setGiorniFattura] = useState<number | ''>(salvati.giorniFattura ?? 60);
-  const [percentualiF2, setPercentualiF2] = useState<Record<string, number>>({});
-  const [percentualiF3, setPercentualiF3] = useState<Record<string, number>>({});
+  const [percentualiF2, setPercentualiF2] = useState<Record<string, number>>(salvati.percentualiF2 ?? {});
+  const [percentualiF3, setPercentualiF3] = useState<Record<string, number>>(salvati.percentualiF3 ?? {});
 
   const [offerte, setOfferte] = useState<Offerta[]>([]);
   const [parametri, setParametri] = useState<ParametroDettaglio[]>([]);
@@ -62,9 +64,24 @@ export function SimulatoreClient() {
       pod,
       indirizzoFornitura,
       citta,
-      codiceFiscalePiva
+      codiceFiscalePiva,
+      percentualiF2,
+      percentualiF3
     });
-  }, [commodity, tipoConsumo, consumoKwh, potenzaKw, giorniFattura, nomeCliente, pod, indirizzoFornitura, citta, codiceFiscalePiva]);
+  }, [
+    commodity,
+    tipoConsumo,
+    consumoKwh,
+    potenzaKw,
+    giorniFattura,
+    nomeCliente,
+    pod,
+    indirizzoFornitura,
+    citta,
+    codiceFiscalePiva,
+    percentualiF2,
+    percentualiF3
+  ]);
 
   useEffect(() => {
     Promise.all([
