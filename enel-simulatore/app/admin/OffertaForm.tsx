@@ -76,7 +76,7 @@ export function OffertaForm({
           </button>
         </div>
 
-        <div className="overflow-y-auto pr-1 flex-1 modale-scroll">
+        <div className="overflow-y-auto pr-1 flex-1 min-h-0 modale-scroll">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className="label">Nome offerta</label>
