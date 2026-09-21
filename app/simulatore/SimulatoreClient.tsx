@@ -271,7 +271,7 @@ export function SimulatoreClient() {
                               min="0"
                               max="100"
                               title={`Quota consumo di questo cliente in fascia F2 (${r.offerta.oreInizioF2}-${r.offerta.oreFineF2})`}
-                              className="w-11 text-center border border-enel-line rounded px-1 py-0.5 text-xs"
+                              className="w-11 text-center border border-sky-200 bg-sky-50 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-300"
                               value={percentualiF2[r.offerta.id] ?? 20}
                               onChange={(e) =>
                                 setPercentualiF2((prev) => ({ ...prev, [r.offerta.id]: Number(e.target.value) }))
@@ -289,7 +289,7 @@ export function SimulatoreClient() {
                                   min="0"
                                   max="100"
                                   title={`Quota consumo di questo cliente in fascia F3 (${r.offerta.oreInizioF3}-${r.offerta.oreFineF3})`}
-                                  className="w-11 text-center border border-enel-line rounded px-1 py-0.5 text-xs"
+                                  className="w-11 text-center border border-sky-200 bg-sky-50 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-300"
                                   value={percentualiF3[r.offerta.id] ?? 0}
                                   onChange={(e) =>
                                     setPercentualiF3((prev) => ({ ...prev, [r.offerta.id]: Number(e.target.value) }))

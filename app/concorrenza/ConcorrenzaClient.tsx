@@ -362,8 +362,11 @@ export function ConcorrenzaClient() {
         <div className="card overflow-hidden">
           <div className="fascia-navy flex items-center justify-between">
             <span>Dati cliente</span>
-            <button className="text-white/80 hover:text-white text-xs font-normal normal-case tracking-normal" onClick={resetForm}>
-              ↺ Azzera tutti i campi
+            <button
+              className="bg-white text-enel-navy rounded px-3 py-1 text-xs font-semibold normal-case tracking-normal"
+              onClick={resetForm}
+            >
+              ↺ Reset
             </button>
           </div>
           <div className="p-5">
@@ -511,18 +514,33 @@ export function ConcorrenzaClient() {
                 </span>
               </div>
             )}
-            {ocrStato === 'ok' && (ocrConfidenza !== 'alta' || ocrNote) && (
+            {ocrStato === 'ok' && (
               <div className="rounded-lg border border-enel-amber/40 bg-enel-amber/10 p-3 mb-3">
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-                  <div className="font-semibold text-enel-amber">Confidenza</div>
-                  <div className="text-enel-ink/80 capitalize">{ocrConfidenza ?? 'da verificare'}</div>
-                  {ocrNote && (
-                    <>
-                      <div className="font-semibold text-enel-amber">Da verificare</div>
-                      <div className="text-enel-ink/80">{ocrNote}</div>
-                    </>
-                  )}
+                <div className="text-[10px] font-semibold text-enel-amber uppercase tracking-wide mb-2">
+                  Letto dal documento — verifica prima di confermare
                 </div>
+                <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  <div className="text-enel-ink/50">Prezzo {commodity === 'GAS' ? 'Smc' : 'kWh'}</div>
+                  <div className="font-medium text-enel-ink">{prezzoKwh !== '' ? `${prezzoKwh} €` : '—'}</div>
+                  <div className="text-enel-ink/50">CCV mensile</div>
+                  <div className="font-medium text-enel-ink">{ccv !== '' ? `${ccv} €` : '—'}</div>
+                  <div className="text-enel-ink/50">Consumo</div>
+                  <div className="font-medium text-enel-ink">
+                    {consumoKwh !== '' ? `${consumoKwh} ${commodity === 'GAS' ? 'Smc' : 'kWh'}` : '—'}
+                  </div>
+                  <div className="text-enel-ink/50">Potenza</div>
+                  <div className="font-medium text-enel-ink">{potenzaKw !== '' ? `${potenzaKw} kW` : '—'}</div>
+                  <div className="text-enel-ink/50">Periodo</div>
+                  <div className="font-medium text-enel-ink">{giorniFattura !== '' ? `${giorniFattura} giorni` : '—'}</div>
+                  <div className="text-enel-ink/50">Confidenza</div>
+                  <div className="font-medium text-enel-ink capitalize">{ocrConfidenza ?? 'n/d'}</div>
+                </div>
+                {ocrNote && (
+                  <div className="text-xs text-enel-ink/70 mt-2 pt-2 border-t border-enel-amber/30">
+                    <span className="font-semibold text-enel-amber">Da verificare: </span>
+                    {ocrNote}
+                  </div>
+                )}
               </div>
             )}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
