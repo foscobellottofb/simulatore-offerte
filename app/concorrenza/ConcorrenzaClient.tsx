@@ -88,6 +88,7 @@ export function ConcorrenzaClient() {
   const [argomenti, setArgomenti] = useState<ArgomentoVendita[]>([]);
   const [ocrStato, setOcrStato] = useState<'idle' | 'analisi' | 'ok' | 'errore'>('idle');
   const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [ocrConfidenza, setOcrConfidenza] = useState<string | null>(null);
   const [analisiIA, setAnalisiIA] = useState<string | null>(null);
   const [costiExtra, setCostiExtra] = useState<{ descrizione: string; importo: number | null; tipo: string }[]>([]);
 
@@ -264,11 +265,8 @@ export function ConcorrenzaClient() {
       setAnalisiIA(data.analisi ?? null);
       setCostiExtra(Array.isArray(data.costiExtra) ? data.costiExtra : []);
       setOcrStato('ok');
-      if (data.confidenza !== 'alta' || data.note) {
-        setOcrNote(
-          `Confidenza ${data.confidenza ?? 'da verificare'}${data.note ? ' — ' + data.note : ''}. Controlla i valori prima di confermare.`
-        );
-      }
+      setOcrConfidenza(data.confidenza ?? null);
+      setOcrNote(data.note ?? null);
     } catch (err) {
       setOcrStato('errore');
       setOcrNote(`Errore di rete durante l'invio del documento${err instanceof Error ? ': ' + err.message : ''}.`);
@@ -323,12 +321,46 @@ export function ConcorrenzaClient() {
     }
   }
 
+  function resetForm() {
+    if (!confirm('Azzerare tutti i campi e iniziare un nuovo confronto?')) return;
+    setCommodity('LUCE');
+    setTipoConsumo('PERIODO');
+    setConsumoKwh(397);
+    setPotenzaKw(3);
+    setGiorniFattura(60);
+    setNomeCliente('');
+    setPod('');
+    setCodiceFiscalePiva('');
+    setIndirizzoFornitura('');
+    setCitta('');
+    setPrezzoKwh('');
+    setCcv('');
+    setTipoPrezzoConcorrente('FISSO');
+    setTotaleDichiarato('');
+    setNomeFornitore('');
+    setAnalisiIA(null);
+    setCostiExtra([]);
+    setOcrNote(null);
+    setOcrConfidenza(null);
+    setOcrStato('idle');
+    setScriptVendita(null);
+    setScriptStato('idle');
+    scriviPersistito('simulotto:cliente', {});
+    scriviPersistito('simulotto:concorrente', {});
+  }
+
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
-      <h1 className="text-2xl font-semibold tracking-tight mb-1">Confronto con la concorrenza</h1>
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Confronto con la concorrenza</h1>
+        <button className="btn-secondary text-xs whitespace-nowrap" onClick={resetForm}>
+          ↺ Azzera tutti i campi
+        </button>
+      </div>
       <p className="text-sm text-enel-ink/60 mb-6">
         Inserisci solo prezzo kWh e CCV del concorrente (a mano o da foto bolletta): gli altri dati restano quelli
-        del cliente inseriti qui sotto.
+        del cliente inseriti qui sotto. <span className="text-enel-green font-medium">In verde</span> i due campi
+        indispensabili per simulare un'offerta.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -338,7 +370,7 @@ export function ConcorrenzaClient() {
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="label">Commodity</label>
-                <select className="input" value={commodity} onChange={(e) => setCommodity(e.target.value as Commodity)}>
+                <select className="input-azzurro" value={commodity} onChange={(e) => setCommodity(e.target.value as Commodity)}>
                   <option value="LUCE">Luce</option>
                   <option value="GAS">Gas</option>
                 </select>
@@ -350,7 +382,7 @@ export function ConcorrenzaClient() {
                 </label>
                 <input
                   type="number"
-                  className="input"
+                  className="input-azzurro"
                   value={giorniFattura}
                   onChange={(e) => setGiorniFattura(e.target.value === '' ? '' : Number(e.target.value))}
                 />
@@ -361,7 +393,7 @@ export function ConcorrenzaClient() {
                   <AiutoCampo testo='"Del periodo" = hai già i kWh del periodo fatturato. "Annuo" = hai una stima del consumo annuo, scalata automaticamente sui giorni fattura.' />
                 </label>
                 <select
-                  className="input"
+                  className="input-azzurro"
                   value={tipoConsumo}
                   onChange={(e) => setTipoConsumo(e.target.value as 'ANNUO' | 'PERIODO')}
                 >
@@ -373,7 +405,7 @@ export function ConcorrenzaClient() {
                 <label className="label">{tipoConsumo === 'PERIODO' ? `${commodity === 'GAS' ? 'Smc' : 'kWh'} nei ${giorniFattura} giorni` : `${commodity === 'GAS' ? 'Smc' : 'kWh'} in un anno`}</label>
                 <input
                   type="number"
-                  className="input"
+                  className="input-azzurro"
                   value={consumoKwh}
                   onChange={(e) => setConsumoKwh(e.target.value === '' ? '' : Number(e.target.value))}
                 />
@@ -386,7 +418,7 @@ export function ConcorrenzaClient() {
                   </label>
                   <input
                     type="number"
-                    className="input"
+                    className="input-azzurro"
                     value={potenzaKw}
                     onChange={(e) => setPotenzaKw(e.target.value === '' ? '' : Number(e.target.value))}
                   />
@@ -394,23 +426,23 @@ export function ConcorrenzaClient() {
               )}
               <div>
                 <label className="label">Nome cliente (per PDF)</label>
-                <input className="input" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
+                <input className="input-azzurro" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
               </div>
               <div>
                 <label className="label">POD (opzionale, per PDF)</label>
-                <input className="input" value={pod} onChange={(e) => setPod(e.target.value)} placeholder="IT001E..." />
+                <input className="input-azzurro" value={pod} onChange={(e) => setPod(e.target.value)} placeholder="IT001E..." />
               </div>
               <div>
                 <label className="label">Cod. Fiscale/P.IVA (opzionale)</label>
-                <input className="input" value={codiceFiscalePiva} onChange={(e) => setCodiceFiscalePiva(e.target.value)} />
+                <input className="input-azzurro" value={codiceFiscalePiva} onChange={(e) => setCodiceFiscalePiva(e.target.value)} />
               </div>
               <div>
                 <label className="label">Indirizzo fornitura (opzionale, per PDF)</label>
-                <input className="input" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} placeholder="Via Roma 12" />
+                <input className="input-azzurro" value={indirizzoFornitura} onChange={(e) => setIndirizzoFornitura(e.target.value)} placeholder="Via Roma 12" />
               </div>
               <div>
                 <label className="label">Città (opzionale, per PDF)</label>
-                <input className="input" value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="33072 Casarsa della Delizia PN" />
+                <input className="input-azzurro" value={citta} onChange={(e) => setCitta(e.target.value)} placeholder="33072 Casarsa della Delizia PN" />
               </div>
             </div>
 
@@ -479,7 +511,20 @@ export function ConcorrenzaClient() {
                 </span>
               </div>
             )}
-            {ocrStato === 'ok' && ocrNote && <div className="text-xs text-enel-amber mb-2">{ocrNote}</div>}
+            {ocrStato === 'ok' && (ocrConfidenza !== 'alta' || ocrNote) && (
+              <div className="rounded-lg border border-enel-amber/40 bg-enel-amber/10 p-3 mb-3">
+                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                  <div className="font-semibold text-enel-amber">Confidenza</div>
+                  <div className="text-enel-ink/80 capitalize">{ocrConfidenza ?? 'da verificare'}</div>
+                  {ocrNote && (
+                    <>
+                      <div className="font-semibold text-enel-amber">Da verificare</div>
+                      <div className="text-enel-ink/80">{ocrNote}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             {ocrStato === 'errore' && <div className="text-xs text-red-600 mb-2">{ocrNote}</div>}
 
             {ocrStato === 'ok' && (analisiIA || costiExtra.length > 0) && (
@@ -504,12 +549,12 @@ export function ConcorrenzaClient() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Fornitore</label>
-                <input className="input" value={nomeFornitore} onChange={(e) => setNomeFornitore(e.target.value)} />
+                <input className="input-azzurro" value={nomeFornitore} onChange={(e) => setNomeFornitore(e.target.value)} />
               </div>
               <div>
                 <label className="label">Tipo prezzo</label>
                 <select
-                  className="input"
+                  className="input-azzurro"
                   value={tipoPrezzoConcorrente}
                   onChange={(e) => setTipoPrezzoConcorrente(e.target.value as 'FISSO' | 'VARIABILE')}
                 >
@@ -522,7 +567,7 @@ export function ConcorrenzaClient() {
                 <input
                   type="number"
                   step="0.0001"
-                  className="input"
+                  className="input-verde"
                   value={prezzoKwh}
                   onChange={(e) => setPrezzoKwh(e.target.value === '' ? '' : Number(e.target.value))}
                 />
@@ -532,7 +577,7 @@ export function ConcorrenzaClient() {
                 <input
                   type="number"
                   step="0.01"
-                  className="input"
+                  className="input-verde"
                   value={ccv}
                   onChange={(e) => setCcv(e.target.value === '' ? '' : Number(e.target.value))}
                 />
@@ -545,7 +590,7 @@ export function ConcorrenzaClient() {
                 <input
                   type="number"
                   step="0.01"
-                  className="input"
+                  className="input-azzurro"
                   value={totaleDichiarato}
                   onChange={(e) => setTotaleDichiarato(e.target.value === '' ? '' : Number(e.target.value))}
                 />

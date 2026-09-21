@@ -42,8 +42,7 @@ Devi restituire SOLO un oggetto JSON, senza testo aggiuntivo, con questa forma e
 Regole:
 - "prezzoKwhLuce"/"prezzoKwhGas": il prezzo unitario della SOLA materia energia in €/kWh (o €/Smc per
   il gas) — quello che il fornitore applica per l'offerta, NON un totale in euro. Se ci sono più fasce
-  orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo e
-  spiegalo in "note".
+  orarie, usa il prezzo medio/monorario se disponibile, altrimenti il valore più rappresentativo.
 - "ccvMensile": il corrispettivo fisso di commercializzazione/vendita mensile in euro, se presente.
 - "totaleBolletta": il totale da pagare indicato in bolletta, se leggibile.
 - "consumoKwh": il consumo del periodo fatturato in kWh (elettricità) o Smc (gas) — quello effettivamente
@@ -59,6 +58,11 @@ Regole:
 - "indirizzoFornitura": via e numero civico del punto di fornitura, se presente (separato dalla città).
 - "citta": CAP e città/comune del punto di fornitura, se presente.
 - "codiceFiscalePiva": codice fiscale o partita IVA dell'intestatario, se presente.
+- "note": SOLO un avviso breve (massimo una frase, circa 15-20 parole), da mostrare in una piccola
+  etichetta nell'interfaccia — non un riassunto di quello che hai estratto (quei valori sono già nei
+  campi sopra, non ripeterli qui). Usala solo per un'ambiguità reale che chi userà i dati deve sapere
+  (es. "prezzo medio tra F1 e F2, verificare fascia esatta" oppure "due valori discordanti in bolletta,
+  usato quello più recente"). Se non c'è nulla di ambiguo, lascia null.
 - "costiExtra": voci che NON sono la normale spesa energia/rete/oneri/accisa/IVA del periodo — es.
   interessi di mora, spese di sollecito o riscossione, canoni di noleggio contatore, contributi una
   tantum, rate di importi arretrati, bolli. "tipo" è "una_tantum" per addebiti isolati legati a un
