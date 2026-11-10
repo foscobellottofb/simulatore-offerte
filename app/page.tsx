@@ -1,14 +1,24 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { COOKIE_NAME, leggiToken } from '@/lib/auth';
 
-export default function HomePage() {
+// Legge chi è entrato per mostrare solo le sezioni del suo ruolo.
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const sessione = await leggiToken(cookies().get(COOKIE_NAME)?.value);
+  const ruolo = sessione?.ruolo;
+
   return (
-    <div className="p-4 sm:p-10 max-w-3xl">
-      <h1 className="text-3xl font-semibold tracking-tight mb-2">simulOTTO — Enel SMB</h1>
+    <div className="p-4 sm:p-10 max-w-4xl">
+      <h1 className="text-3xl font-semibold tracking-tight mb-2">
+        {sessione ? `Ciao ${sessione.nome.split(' ')[0]}` : 'simulOTTO — Enel SMB'}
+      </h1>
       <p className="text-enel-ink/60 mb-8">
         Confronta le offerte luce e gas Enel a partire da consumo e potenza del cliente, valuta un'offerta
         concorrente e genera una bolletta simulata in PDF.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Link href="/simulatore" className="card p-5 hover:border-enel-navy transition-colors">
           <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">1</div>
           <div className="text-sm font-semibold mb-1">Simulatore offerte</div>
@@ -27,13 +37,29 @@ export default function HomePage() {
           <div className="text-sm font-semibold mb-1">Mercato dell'energia</div>
           <div className="text-xs text-enel-ink/60">PUN, storico e offerte concorrenti</div>
         </Link>
-        <Link href="/admin" className="card p-5 hover:border-enel-navy transition-colors">
-          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">4</div>
-          <div className="text-sm font-semibold mb-1">Dati e parametri</div>
-          <div className="text-xs text-enel-ink/60">Aggiorna offerte, accise, IVA e oneri</div>
-        </Link>
+        {ruolo === 'MASTER' && (
+          <Link href="/admin" className="card p-5 hover:border-enel-navy transition-colors">
+            <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">4</div>
+            <div className="text-sm font-semibold mb-1">Dati e parametri</div>
+            <div className="text-xs text-enel-ink/60">Aggiorna offerte, accise, IVA e oneri</div>
+          </Link>
+        )}
+        {ruolo === 'MASTER' && (
+          <Link href="/admin/agenzie" className="card p-5 hover:border-enel-navy transition-colors">
+            <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">5</div>
+            <div className="text-sm font-semibold mb-1">Agenzie e utenti</div>
+            <div className="text-xs text-enel-ink/60">Crea agenzie e titolari, controlla accessi e utilizzo</div>
+          </Link>
+        )}
+        {ruolo === 'TITOLARE' && (
+          <Link href="/agenzia" className="card p-5 hover:border-enel-navy transition-colors">
+            <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">4</div>
+            <div className="text-sm font-semibold mb-1">La mia agenzia</div>
+            <div className="text-xs text-enel-ink/60">Crea e gestisci gli accessi dei tuoi consulenti</div>
+          </Link>
+        )}
         <Link href="/aiuto" className="card p-5 hover:border-enel-navy transition-colors">
-          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">5</div>
+          <div className="w-6 h-6 rounded bg-enel-navy text-white text-xs font-bold flex items-center justify-center mb-2">?</div>
           <div className="text-sm font-semibold mb-1">Aiuto</div>
           <div className="text-xs text-enel-ink/60">Come funziona ogni pagina, campo per campo</div>
         </Link>

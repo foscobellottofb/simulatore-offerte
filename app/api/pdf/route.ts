@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { richiediUtente } from '@/lib/utenteCorrente';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { BollettaPdf } from '@/lib/BollettaPdf';
 import { RisultatoCalcolo, InputSimulazione } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
+  // Solo utenti attivi (account e agenzia non sospesi): sono chiamate che consumano risorse.
+  const auth = await richiediUtente(req);
+  if (auth.risposta) return auth.risposta;
+
   const body: {
     risultato: RisultatoCalcolo;
     input: InputSimulazione;

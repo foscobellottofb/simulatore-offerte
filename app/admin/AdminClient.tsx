@@ -26,6 +26,9 @@ export function AdminClient() {
   const [salvandoPsv, setSalvandoPsv] = useState(false);
   const [sincronizzandoPun, setSincronizzandoPun] = useState(false);
   const [sincronizzandoPsv, setSincronizzandoPsv] = useState(false);
+  // Quanti mesi conclusi aggiornare dal web (1 = solo l'ultimo mese concluso)
+  const [mesiSyncPun, setMesiSyncPun] = useState(1);
+  const [mesiSyncPsv, setMesiSyncPsv] = useState(1);
   const [sincronizzandoConcorrenti, setSincronizzandoConcorrenti] = useState(false);
   const [tab, setTab] = useState<'offerte' | 'parametri' | 'rete' | 'pun' | 'psv' | 'concorrenza' | 'argomentario' | 'direttive'>('offerte');
   const [formAperto, setFormAperto] = useState<'nuova' | Offerta | null>(null);
@@ -142,7 +145,11 @@ export function AdminClient() {
   async function sincronizzaPunDalWeb() {
     setSincronizzandoPun(true);
     try {
-      const res = await fetch('/api/pun/sync', { method: 'POST' });
+      const res = await fetch('/api/pun/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mesi: mesiSyncPun })
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -198,7 +205,11 @@ export function AdminClient() {
   async function sincronizzaPsvDalWeb() {
     setSincronizzandoPsv(true);
     try {
-      const res = await fetch('/api/psv/sync', { method: 'POST' });
+      const res = await fetch('/api/psv/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mesi: mesiSyncPsv })
+      });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error ?? 'Sincronizzazione non riuscita.');
@@ -388,15 +399,9 @@ export function AdminClient() {
     <div className="p-4 sm:p-8 max-w-5xl">
       <div className="flex items-start justify-between gap-4 mb-1">
         <h1 className="text-2xl font-semibold tracking-tight">Dati e parametri</h1>
-        <button
-          className="text-xs text-enel-ink/50 hover:text-enel-ink hover:underline whitespace-nowrap mt-1"
-          onClick={async () => {
-            await fetch('/api/auth/logout', { method: 'POST' });
-            window.location.href = '/admin/login';
-          }}
-        >
-          Esci
-        </button>
+        <a href="/admin/agenzie" className="text-xs text-enel-navy hover:underline whitespace-nowrap mt-1">
+          Agenzie e utenti →
+        </a>
       </div>
       <p className="text-sm text-enel-ink/60 mb-6">
         Qui aggiorni le offerte Enel, le voci di dettaglio (accise, IVA, oneri) e gli argomenti di vendita usati
@@ -615,12 +620,26 @@ export function AdminClient() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <p className="text-xs text-enel-ink/50">
               Valore medio mensile del PUN Index GME (€/MWh), usato nel grafico della pagina pubblica "/mercato".
-              Aggiorna qui il mese corrente appena il GME lo pubblica (di solito nei primi giorni del mese
-              successivo), o correggi valori stimati con quelli ufficiali.
+              Appena il GME pubblica il mese concluso (di solito nei primi giorni del mese successivo) scegli quanti
+              mesi aggiornare e premi "Aggiorna dal web". Puoi anche correggere a mano qualsiasi valore e premere Salva.
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap justify-end gap-2 shrink-0 max-w-[60%]">
+              <select
+                className="input !w-auto text-xs !py-1"
+                value={mesiSyncPun}
+                onChange={(e) => setMesiSyncPun(Number(e.target.value))}
+                disabled={sincronizzandoPun}
+                title="Quanti mesi conclusi aggiornare, partendo dall'ultimo"
+              >
+                <option value={1}>Solo ultimo mese</option>
+                <option value={2}>Ultimi 2 mesi</option>
+                <option value={3}>Ultimi 3 mesi</option>
+                <option value={6}>Ultimi 6 mesi</option>
+                <option value={12}>Ultimi 12 mesi</option>
+                <option value={24}>Ultimi 24 mesi</option>
+              </select>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPunDalWeb} disabled={sincronizzandoPun}>
-                {sincronizzandoPun ? 'Cerco…' : '🔎 Sincronizza da web'}
+                {sincronizzandoPun ? 'Cerco…' : '🔎 Aggiorna dal web'}
               </button>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePun}>
                 + Aggiungi mese
@@ -628,9 +647,10 @@ export function AdminClient() {
             </div>
           </div>
           <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
-            "Sincronizza da web" chiede a Claude di cercare il dato ufficiale sul web e aggiorna i mesi trovati
-            (consuma credito dell'account Anthropic collegato). I mesi aggiornati da fonte non certa restano
-            marcati "stima": controllali comunque prima di un uso puntuale con un cliente.
+            "Aggiorna dal web" chiede a Claude di cercare il dato ufficiale solo per i mesi scelti nel menu
+            (di default l'ultimo mese concluso; il mese in corso non si aggiorna finché non è finito). Lo storico
+            restante non viene toccato. Consuma credito dell'account Anthropic collegato: più mesi = più ricerca.
+            I mesi da fonte non certa restano marcati "stima": controllali prima di un uso puntuale con un cliente.
           </p>
           {Array.from(new Set(pun.map((p) => p.anno))).sort((a, b) => b - a).map((anno) => (
             <div key={anno} className="mb-5">
@@ -674,12 +694,26 @@ export function AdminClient() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <p className="text-xs text-enel-ink/50">
               Valore medio mensile dell'indice PSV gas (€/Smc), l'equivalente del PUN per il gas, usato nel grafico
-              della pagina pubblica "/mercato". Aggiorna qui il mese corrente appena disponibile, o correggi valori
-              stimati con quelli ufficiali.
+              della pagina pubblica "/mercato". Scegli quanti mesi conclusi
+              aggiornare e premi "Aggiorna dal web", oppure correggi a mano e premi Salva.
             </p>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap justify-end gap-2 shrink-0 max-w-[60%]">
+              <select
+                className="input !w-auto text-xs !py-1"
+                value={mesiSyncPsv}
+                onChange={(e) => setMesiSyncPsv(Number(e.target.value))}
+                disabled={sincronizzandoPsv}
+                title="Quanti mesi conclusi aggiornare, partendo dall'ultimo"
+              >
+                <option value={1}>Solo ultimo mese</option>
+                <option value={2}>Ultimi 2 mesi</option>
+                <option value={3}>Ultimi 3 mesi</option>
+                <option value={6}>Ultimi 6 mesi</option>
+                <option value={12}>Ultimi 12 mesi</option>
+                <option value={24}>Ultimi 24 mesi</option>
+              </select>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={sincronizzaPsvDalWeb} disabled={sincronizzandoPsv}>
-                {sincronizzandoPsv ? 'Cerco…' : '🔎 Sincronizza da web'}
+                {sincronizzandoPsv ? 'Cerco…' : '🔎 Aggiorna dal web'}
               </button>
               <button className="btn-secondary text-xs whitespace-nowrap" onClick={aggiungiMesePsv}>
                 + Aggiungi mese
@@ -687,9 +721,10 @@ export function AdminClient() {
             </div>
           </div>
           <p className="text-[11px] text-enel-ink/40 mb-4 -mt-2">
-            "Sincronizza da web" chiede a Claude di cercare il dato ufficiale sul web e aggiorna i mesi trovati
-            (consuma credito dell'account Anthropic collegato). I mesi aggiornati da fonte non certa restano
-            marcati "stima": controllali comunque prima di un uso puntuale con un cliente.
+            "Aggiorna dal web" chiede a Claude di cercare il dato ufficiale solo per i mesi scelti nel menu
+            (di default l'ultimo mese concluso; il mese in corso non si aggiorna finché non è finito). Lo storico
+            restante non viene toccato. Consuma credito dell'account Anthropic collegato: più mesi = più ricerca.
+            I mesi da fonte non certa restano marcati "stima": controllali prima di un uso puntuale con un cliente.
           </p>
           {Array.from(new Set(psv.map((p) => p.anno))).sort((a, b) => b - a).map((anno) => (
             <div key={anno} className="mb-5">

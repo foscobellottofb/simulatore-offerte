@@ -1,41 +1,41 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/db';
 import { estraiJson } from '@/lib/estraiJson';
+import { MeseAnno, nomeMese, quantiMesiDaBody, ultimiMesiConclusi } from '@/lib/mesiMercato';
 
 // Richiede ANTHROPIC_API_KEY (stessa usata per PUN, OCR, script di vendita).
 // Protetta dal login admin via middleware.ts.
+//
+// Aggiorna SOLO i mesi richiesti: di default l'ultimo mese concluso, oppure
+// gli ultimi N mesi conclusi scelti in Admin (corpo { "mesi": N }).
+// Gli altri mesi dello storico non vengono mai toccati.
 const anthropic = new Anthropic();
 
-const SYSTEM_PROMPT = `Sei un ricercatore che consulta il web per trovare il valore ufficiale
-dell'indice PSV gas (Punto di Scambio Virtuale, gestito da Snam nell'ambito del sistema gas
-italiano, pubblicato/derivato dai dati GME) — l'equivalente del PUN per il gas naturale.
+function systemPrompt(mesi: MeseAnno[]) {
+  const elenco = mesi.map((m) => `- ${nomeMese(m)} (anno ${m.anno}, mese ${m.mese})`).join('\n');
+  return `Sei un ricercatore che consulta il web per trovare il valore medio mensile dell'indice PSV gas
+(Punto di Scambio Virtuale, mercato all'ingrosso del gas italiano; Day Ahead), in €/Smc, SOLO per questi mesi:
+${elenco}
 
-Cerca sul web i valori medi mensili del PSV (in €/Smc) per TUTTI i mesi completi degli ultimi 18-24
-mesi rispetto a oggi per cui riesci a trovare un dato affidabile — non fermarti ai primi 2-3 mesi:
-cerca specificamente tabelle o articoli che riportino serie storiche di più mesi consecutivi (spesso un
-singolo articolo ne elenca 10-15 insieme), non solo il dato dell'ultimo mese. Dai priorità a fonti che citano esplicitamente il dato ufficiale GME/Snam o la
-componente CMEM ARERA (che è calcolata proprio sulla media mensile PSV Day Ahead).
+Dai priorità a fonti che citano esplicitamente il dato ufficiale GME/Snam o la componente CMEM ARERA
+(calcolata proprio sulla media mensile PSV Day Ahead). Attenzione a non confondere un mese con quello
+precedente o successivo.
 
 Rispondi SOLO con un oggetto JSON, senza testo aggiuntivo, con questa forma esatta:
-{
-  "mesi": [
-    { "anno": number, "mese": number, "valoreSmc": number, "fonte": string, "confidenza": "alta" | "media" | "bassa" }
-  ]
-}
+{ "mesi": [ { "anno": number, "mese": number, "trovato": boolean, "valoreSmc": number | null, "fonte": string, "confidenza": "alta" | "media" | "bassa" } ] }
 
 Regole:
-- "mese" è un numero 1-12.
-- "valoreSmc" è il prezzo in €/Smc (se trovi solo il valore in €/MWh, convertilo dividendo per
-  circa 9,4 — il fattore di conversione standard usato in Italia — e segnalalo in "fonte").
-- "fonte" è il nome del sito/pagina da cui hai preso il dato.
+- Una voce per ciascun mese dell'elenco, nessun mese in più.
+- "valoreSmc" è il prezzo in €/Smc. Se trovi solo il valore in €/MWh, convertilo dividendo per
+  circa 9,4 (fattore standard usato in Italia) e scrivilo in "fonte".
 - "confidenza" è "alta" solo se la fonte cita esplicitamente il dato ufficiale GME/Snam o la CMEM
-  ARERA; "media" se è una fonte secondaria coerente con altre; "bassa" se è una stima o le fonti
-  sono discordanti.
-- Non includere il mese corrente se non ancora concluso.
-- Se non trovi un dato affidabile per un mese, ometti quel mese piuttosto che inventarlo.`;
+  ARERA; "media" se è una fonte secondaria coerente con altre; "bassa" se è una stima.
+- Se il dato di un mese non lo trovi con sicurezza, metti "trovato": false e "valoreSmc": null
+  invece di inventarlo.`;
+}
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
@@ -43,11 +43,14 @@ export async function POST() {
     );
   }
 
+  const body = await req.json().catch(() => ({}));
+  const richiesti = ultimiMesiConclusi(quantiMesiDaBody(body));
+
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 8000,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: 'Trova i valori PSV gas mensili più recenti disponibili.' }],
+    max_tokens: 6000,
+    system: systemPrompt(richiesti),
+    messages: [{ role: 'user', content: `Trova il PSV medio mensile di: ${richiesti.map(nomeMese).join(', ')}.` }],
     tools: [{ type: 'web_search_20250305', name: 'web_search' }] as any
   });
 
@@ -56,27 +59,42 @@ export async function POST() {
     .map((b) => ('text' in b ? b.text : ''))
     .join('\n');
 
-  let parsed: { mesi: { anno: number; mese: number; valoreSmc: number; fonte: string; confidenza: string }[] };
+  type Voce = { anno: number; mese: number; trovato: boolean; valoreSmc: number | null; fonte: string; confidenza: string };
+  let parsed: { mesi: Voce[] };
   try {
     parsed = estraiJson(testo);
   } catch {
     return NextResponse.json({ error: 'Risposta non interpretabile, riprova.', raw: testo }, { status: 422 });
   }
 
-  const risultati = [];
-  for (const m of parsed.mesi ?? []) {
-    if (!m.anno || !m.mese || m.valoreSmc == null) continue;
-    const salvato = await prisma.psvMensile.upsert({
-      where: { anno_mese: { anno: m.anno, mese: m.mese } },
-      update: { valoreSmc: m.valoreSmc, stimato: m.confidenza !== 'alta' },
-      create: { anno: m.anno, mese: m.mese, valoreSmc: m.valoreSmc, stimato: m.confidenza !== 'alta' }
+  const righe: string[] = [];
+  let aggiornati = 0;
+  for (const m of richiesti) {
+    const v = (parsed.mesi ?? []).find((x) => Number(x.anno) === m.anno && Number(x.mese) === m.mese);
+    const valore = typeof v?.valoreSmc === 'number' ? v.valoreSmc : NaN;
+    // Controllo di buon senso: un PSV mensile fuori da 0,05-5 €/Smc è quasi certamente un errore
+    if (!v || !v.trovato || !Number.isFinite(valore) || valore < 0.05 || valore > 5) {
+      righe.push(`• ${nomeMese(m)}: non trovato, lasciato com'era`);
+      continue;
+    }
+    const stimato = v.confidenza !== 'alta';
+    const precedente = await prisma.psvMensile.findUnique({ where: { anno_mese: m } });
+    await prisma.psvMensile.upsert({
+      where: { anno_mese: m },
+      update: { valoreSmc: valore, stimato },
+      create: { ...m, valoreSmc: valore, stimato }
     });
-    risultati.push({ ...salvato, fonte: m.fonte, confidenza: m.confidenza });
+    aggiornati++;
+    righe.push(
+      `• ${nomeMese(m)}: ${valore.toFixed(3)} €/Smc` +
+        (precedente ? ` (prima ${precedente.valoreSmc.toFixed(3)})` : ' (nuovo)') +
+        (stimato ? ` — STIMATO, fonte ${v.fonte || 'n/d'}: controllalo` : '')
+    );
   }
 
   return NextResponse.json({
     ok: true,
-    messaggio: `Aggiornati ${risultati.length} mesi dal web.`,
-    dettaglio: risultati
+    aggiornati,
+    messaggio: `PSV: aggiornati ${aggiornati} mesi su ${richiesti.length}. Gli altri mesi dello storico non sono stati toccati.\n\n${righe.join('\n')}`
   });
 }

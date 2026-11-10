@@ -1,16 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const NAV = [
+type Ruolo = 'MASTER' | 'TITOLARE' | 'CONSULENTE';
+type Io = { id: string; nome: string; username: string; ruolo: Ruolo; agenziaNome: string | null };
+type VoceNav = { href: string; label: string; hint: string; ruoli?: Ruolo[]; pubblica?: boolean };
+
+// "ruoli": se presente, la voce si vede solo a quei ruoli.
+// "pubblica": la voce si vede anche senza login (pagine informative).
+const NAV: VoceNav[] = [
   { href: '/simulatore', label: 'Simulatore offerte', hint: 'kW, consumo → confronto' },
   { href: '/concorrenza', label: 'Confronto concorrenza', hint: 'prezzo, CCV, foto bolletta' },
-  { href: '/mercato', label: 'Mercato dell\'energia', hint: 'PUN, storico, concorrenza' },
-  { href: '/admin', label: 'Dati e parametri', hint: 'offerte e voci di dettaglio' },
-  { href: '/aiuto', label: 'Aiuto', hint: 'come funziona ogni pagina' }
+  { href: '/mercato', label: 'Mercato dell\'energia', hint: 'PUN, storico, concorrenza', pubblica: true },
+  { href: '/agenzia', label: 'La mia agenzia', hint: 'consulenti e accessi', ruoli: ['TITOLARE'] },
+  { href: '/admin', label: 'Dati e parametri', hint: 'offerte e voci di dettaglio', ruoli: ['MASTER'] },
+  { href: '/admin/agenzie', label: 'Agenzie e utenti', hint: 'controllo centrale accessi', ruoli: ['MASTER'] },
+  { href: '/aiuto', label: 'Aiuto', hint: 'come funziona ogni pagina', pubblica: true }
 ];
+
+const PAGINE_SENZA_MENU = ['/login', '/setup'];
+const PAGINE_PUBBLICHE = ['/mercato', '/aiuto'];
+
+const ETICHETTA_RUOLO: Record<Ruolo, string> = {
+  MASTER: 'Amministratore',
+  TITOLARE: 'Titolare agenzia',
+  CONSULENTE: 'Consulente'
+};
 
 // Piccolo blocco logo "8": stessa idea dell'avatar del progetto (due anelli),
 // qui in blu Enel su sfondo bianco, per restare leggero nella sidebar chiara.
@@ -26,7 +43,47 @@ function LogoMark() {
 
 export function Sidebar() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
+  const [io, setIo] = useState<Io | null>(null);
+  const [caricato, setCaricato] = useState(false);
+  const pathname = usePathname() ?? '/';
+  const senzaMenu = PAGINE_SENZA_MENU.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
+  // Chi sono? Se la sessione non è più valida (scaduta, account o agenzia
+  // disattivati) e la pagina non è pubblica, si torna al login.
+  useEffect(() => {
+    if (senzaMenu) return;
+    let annullato = false;
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((dati: Io | null) => {
+        if (annullato) return;
+        setIo(dati);
+        setCaricato(true);
+        const pubblica = PAGINE_PUBBLICHE.some((p) => pathname === p || pathname.startsWith(p + '/'));
+        if (!dati && !pubblica) window.location.href = '/login?next=' + encodeURIComponent(pathname);
+      })
+      .catch(() => setCaricato(true));
+    return () => {
+      annullato = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [senzaMenu]);
+
+  if (senzaMenu) return null;
+
+  const voci = caricato
+    ? NAV.filter((v) => (io ? !v.ruoli || v.ruoli.includes(io.ruolo) : v.pubblica))
+    : [];
+  // Voce attiva = quella con l'indirizzo più lungo che corrisponde (così su
+  // /admin/agenzie si accende "Agenzie e utenti" e non anche "Dati e parametri").
+  const hrefAttivo = voci
+    .filter((v) => pathname === v.href || pathname.startsWith(v.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
+  async function esci() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
 
   return (
     <>
@@ -79,8 +136,8 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV.map((item) => {
-            const attiva = pathname === item.href || pathname?.startsWith(item.href + '/');
+          {voci.map((item) => {
+            const attiva = item.href === hrefAttivo;
             return (
               <Link
                 key={item.href}
@@ -105,8 +162,28 @@ export function Sidebar() {
             );
           })}
         </nav>
-        <div className="px-5 py-4 border-t border-enel-line text-xs text-enel-ink/40">
-          Dati aggiornati manualmente dalla pagina "Dati e parametri"
+        <div className="px-5 py-4 border-t border-enel-line text-xs">
+          {io ? (
+            <>
+              <div className="font-medium text-enel-ink truncate">{io.nome}</div>
+              <div className="text-enel-ink/40 truncate">
+                {ETICHETTA_RUOLO[io.ruolo]}
+                {io.agenziaNome ? ` · ${io.agenziaNome}` : ''}
+              </div>
+              <div className="flex gap-4 mt-2">
+                <Link href="/profilo" onClick={() => setOpen(false)} className="text-enel-navy hover:underline">
+                  Il mio profilo
+                </Link>
+                <button onClick={esci} className="text-enel-ink/50 hover:text-enel-ink hover:underline">
+                  Esci
+                </button>
+              </div>
+            </>
+          ) : caricato ? (
+            <Link href="/login" className="btn-primary text-xs inline-block">
+              Accedi
+            </Link>
+          ) : null}
         </div>
       </aside>
     </>

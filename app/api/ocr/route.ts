@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { richiediUtente } from '@/lib/utenteCorrente';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Richiede la variabile d'ambiente ANTHROPIC_API_KEY (Vercel -> Project Settings -> Environment Variables).
@@ -83,6 +84,10 @@ Regole:
 - Se un valore non è leggibile o non è presente, usa null. Non inventare numeri né dati anagrafici.`;
 
 export async function POST(req: NextRequest) {
+  // Solo utenti attivi (account e agenzia non sospesi): sono chiamate che consumano risorse.
+  const auth = await richiediUtente(req);
+  if (auth.risposta) return auth.risposta;
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },

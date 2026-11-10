@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { richiediUtente } from '@/lib/utenteCorrente';
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '@/lib/db';
 
@@ -49,6 +50,10 @@ const REGISTRI = [
 ];
 
 export async function POST(req: NextRequest) {
+  // Solo utenti attivi (account e agenzia non sospesi): sono chiamate che consumano risorse.
+  const auth = await richiediUtente(req);
+  if (auth.risposta) return auth.risposta;
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
@@ -66,14 +71,37 @@ export async function POST(req: NextRequest) {
   });
   const direttiveTesto =
     direttiveAttive.length > 0
-      ? `\n\nIstruzioni aggiuntive dal team, da rispettare insieme a tutto quanto sopra:\n${direttiveAttive.map((d) => `- ${d.testo}`).join('\n')}`
+      ? `\n\nISTRUZIONI DEL TEAM (priorità alta): rispettale sempre insieme a tutto quanto sopra. Se un'istruzione
+dipende da una condizione (es. "se il concorrente è a prezzo variabile…"), verifica la condizione sui
+DATI PER LO SCRIPT qui sotto e, quando è vera, applicala in modo evidente nello script:\n${direttiveAttive.map((d) => `- ${d.testo}`).join('\n')}`
       : '';
+
+  // Tipo di prezzo in parole: serve alle direttive che distinguono fisso/variabile.
+  const tipoEnel =
+    body.tipoPrezzoEnel === 'FISSO'
+      ? 'prezzo FISSO'
+      : body.tipoPrezzoEnel === 'VARIABILE_CAP'
+        ? 'prezzo VARIABILE (indicizzato, con tetto massimo CAP)'
+        : body.tipoPrezzoEnel
+          ? 'prezzo personalizzato'
+          : 'non specificato';
+  const tipoConcorrente =
+    body.tipoPrezzoConcorrente === 'VARIABILE'
+      ? 'prezzo VARIABILE (indicizzato al mercato)'
+      : body.tipoPrezzoConcorrente === 'FISSO'
+        ? 'prezzo FISSO'
+        : 'non specificato';
+  const unita = body.commodity === 'GAS' ? '€/Smc' : '€/kWh';
 
   const contesto = `Dati per lo script:
 - Cliente: ${body.nomeCliente || 'non specificato'}
 - Commodity: ${body.commodity === 'GAS' ? 'gas' : 'energia elettrica'}
 - Offerta Enel proposta: ${body.offertaNome || 'non specificata'}
+- Tipo di prezzo dell'offerta Enel: ${tipoEnel}
 - Fornitore attuale del cliente: ${body.fornitoreConcorrente || 'non specificato'}
+- Tipo di prezzo dell'offerta attuale del cliente (concorrente): ${tipoConcorrente}
+- Prezzo energia del concorrente: ${typeof body.prezzoKwhConcorrente === 'number' ? body.prezzoKwhConcorrente + ' ' + unita : 'non specificato'}
+- Quota fissa (CCV) del concorrente: ${typeof body.ccvConcorrente === 'number' ? body.ccvConcorrente + ' €/mese' : 'non specificata'}
 - Totale Enel nel periodo: ${body.totaleEnel != null ? body.totaleEnel.toFixed(2) + ' €' : 'non disponibile'}
 - Totale concorrente nel periodo: ${body.totaleConcorrente != null ? body.totaleConcorrente.toFixed(2) + ' €' : 'non disponibile'}
 - Risparmio annuo stimato: ${body.risparmioAnnuo != null ? body.risparmioAnnuo.toFixed(2) + ' €' : 'non disponibile/non conveniente'}

@@ -197,7 +197,7 @@ export default function AiutoPage() {
           <h2 className="text-lg font-semibold">Dati e parametri (Admin)</h2>
         </div>
         <p className="text-sm text-enel-ink/70 mb-4">
-          Riservato a chi ha la password admin. Qui si aggiorna tutto quello che le altre pagine usano per
+          Riservato all'amministratore (account master). Qui si aggiorna tutto quello che le altre pagine usano per
           calcolare — senza toccare il codice.
         </p>
         <div className="grid sm:grid-cols-2 gap-3">

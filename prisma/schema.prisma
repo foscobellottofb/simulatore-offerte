@@ -210,3 +210,44 @@ model OffertaConcorrente {
   ordinamento Int      @default(0)
   updatedAt   DateTime @updatedAt
 }
+
+// ---------------------------------------------------------------------------
+// MULTI-AGENZIA (fase 1): chi entra in simulOTTO e con quale ruolo.
+//  - MASTER: Fosco, controllo centrale (agenzie, utenti, dati comuni).
+//  - TITOLARE: responsabile di un'agenzia, crea e gestisce i suoi consulenti.
+//  - CONSULENTE: usa simulatore e confronto con le offerte della sua agenzia.
+// Le password NON sono salvate in chiaro: solo un'impronta (hash scrypt).
+// ---------------------------------------------------------------------------
+enum Ruolo {
+  MASTER
+  TITOLARE
+  CONSULENTE
+}
+
+model Agenzia {
+  id        String   @id @default(cuid())
+  nome      String
+  attiva    Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  utenti Utente[]
+}
+
+model Utente {
+  id            String    @id @default(cuid())
+  username      String    @unique // nome utente o email, salvato in minuscolo
+  nome          String
+  passwordHash  String
+  ruolo         Ruolo
+  agenziaId     String? // vuoto solo per il MASTER
+  agenzia       Agenzia?  @relation(fields: [agenziaId], references: [id])
+  attivo        Boolean   @default(true)
+  ultimoAccesso DateTime?
+  numeroAccessi Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([agenziaId])
+}

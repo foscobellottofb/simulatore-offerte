@@ -177,7 +177,7 @@ export function MercatoClient() {
               <div className="text-sm font-semibold">Andamento PUN mensile — confronto tra anni</div>
             </div>
             {serieChart.length > 0 ? (
-              <PunChart serie={serieChart} />
+              <PunChart serie={serieChart} unita="€/MWh" />
             ) : (
               <div className="text-xs text-enel-ink/40">
                 Nessun dato ancora caricato: lancia il seed (endpoint /api/seed/mercato?key=…) da Admin.
@@ -232,7 +232,7 @@ export function MercatoClient() {
           <div className="card p-5 mb-6">
             <div className="text-sm font-semibold mb-3">Andamento PSV mensile — confronto tra anni</div>
             {serieChartPsv.length > 0 ? (
-              <PunChart serie={serieChartPsv} decimaliAsse={2} />
+              <PunChart serie={serieChartPsv} decimaliAsse={2} unita="€/Smc" />
             ) : (
               <div className="text-xs text-enel-ink/40">
                 Nessun dato ancora caricato: lancia il seed (endpoint /api/seed/mercato?key=…) da Admin.

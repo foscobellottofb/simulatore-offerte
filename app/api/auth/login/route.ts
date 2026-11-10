@@ -1,26 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { passwordConfigurata, passwordCorretta, tokenSessione, COOKIE_NAME } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { COOKIE_NAME, OPZIONI_COOKIE, creaToken, segretoConfigurato } from '@/lib/auth';
+import { normalizzaUsername, verificaPassword } from '@/lib/password';
+
+export const dynamic = 'force-dynamic';
+
+const ERRORE_CREDENZIALI = 'Nome utente o password errati.';
 
 export async function POST(req: NextRequest) {
-  if (!passwordConfigurata()) {
+  if (!segretoConfigurato()) {
     return NextResponse.json(
-      { error: 'ADMIN_PASSWORD non è impostata su Vercel: aggiungila nelle variabili d\'ambiente del progetto.' },
+      { error: "ADMIN_PASSWORD non è impostata su Vercel: aggiungila nelle variabili d'ambiente del progetto." },
       { status: 500 }
     );
   }
 
-  const { password } = await req.json();
-  if (typeof password !== 'string' || !passwordCorretta(password)) {
-    return NextResponse.json({ error: 'Password errata.' }, { status: 401 });
+  const body = await req.json().catch(() => ({}));
+  const username = normalizzaUsername(body.username);
+  const password = typeof body.password === 'string' ? body.password : '';
+
+  const u = username ? await prisma.utente.findUnique({ where: { username }, include: { agenzia: true } }) : null;
+
+  if (!u || !verificaPassword(password, u.passwordHash)) {
+    // Piccola attesa: rende più lenti i tentativi a raffica di indovinare la password
+    await new Promise((r) => setTimeout(r, 600));
+    return NextResponse.json({ error: ERRORE_CREDENZIALI }, { status: 401 });
+  }
+  if (!u.attivo) {
+    return NextResponse.json({ error: 'Account disattivato: contatta il titolare della tua agenzia.' }, { status: 403 });
+  }
+  if (u.ruolo !== 'MASTER' && (!u.agenzia || !u.agenzia.attiva)) {
+    return NextResponse.json({ error: 'La tua agenzia è sospesa: contatta l\'amministratore.' }, { status: 403 });
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_NAME, await tokenSessione(), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 14 // 14 giorni
+  await prisma.utente.update({
+    where: { id: u.id },
+    data: { ultimoAccesso: new Date(), numeroAccessi: { increment: 1 } }
   });
+
+  const res = NextResponse.json({ ok: true, ruolo: u.ruolo });
+  res.cookies.set(
+    COOKIE_NAME,
+    await creaToken({ id: u.id, nome: u.nome, ruolo: u.ruolo, agenziaId: u.agenziaId }),
+    OPZIONI_COOKIE
+  );
   return res;
 }
