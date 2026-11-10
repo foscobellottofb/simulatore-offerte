@@ -47,11 +47,12 @@ export default function SetupPage() {
         <div className="text-lg font-semibold tracking-tight mb-1">Accesso amministratore</div>
         <p className="text-sm text-enel-ink/60 mb-5">
           Crea il tuo account da amministratore, oppure reimposta la password se l'hai dimenticata (inserisci lo
-          stesso nome utente). Serve la vecchia password dell'area Admin.
+          stesso nome utente). Come chiave serve la vecchia password dell'area Admin oppure la chiave che usi
+          per caricare i dati (quella di /api/seed).
         </p>
 
-        <label className="label" htmlFor="chiave">Vecchia password Admin</label>
-        <input id="chiave" type="password" className="input mb-4" value={chiave} onChange={(e) => setChiave(e.target.value)} autoFocus />
+        <label className="label" htmlFor="chiave">Chiave: vecchia password Admin o chiave seed</label>
+        <input id="chiave" type="password" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="input mb-4" value={chiave} onChange={(e) => setChiave(e.target.value)} autoFocus />
 
         <label className="label" htmlFor="nome">Il tuo nome</label>
         <input id="nome" className="input mb-4" value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" />

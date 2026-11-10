@@ -7,23 +7,27 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Primo accesso del MASTER e recupero se dimentica la password.
- * Protetto da ADMIN_PASSWORD (la vecchia password dell'Admin, impostata su
- * Vercel): chi la conosce è il proprietario dell'app.
+ * Protetto da una delle due chiavi impostate su Vercel, che conosce solo il
+ * proprietario dell'app: ADMIN_PASSWORD (la vecchia password dell'Admin)
+ * oppure SEED_SECRET (la chiave usata per /api/seed).
  *  - se il nome utente non esiste → crea un nuovo utente MASTER
  *  - se esiste ed è MASTER → gli reimposta nome e password
  *  - se esiste ma è titolare/consulente → errore (non si promuove così)
  */
 export async function POST(req: NextRequest) {
-  const chiave = process.env.ADMIN_PASSWORD;
-  if (!chiave) {
+  const chiaviValide = [process.env.ADMIN_PASSWORD, process.env.SEED_SECRET].filter(
+    (c): c is string => typeof c === 'string' && c.length > 0
+  );
+  if (chiaviValide.length === 0) {
     return NextResponse.json(
-      { error: "ADMIN_PASSWORD non è impostata su Vercel: aggiungila nelle variabili d'ambiente del progetto." },
+      { error: "Né ADMIN_PASSWORD né SEED_SECRET sono impostate su Vercel: aggiungine una nelle variabili d'ambiente." },
       { status: 500 }
     );
   }
 
   const body = await req.json().catch(() => ({}));
-  if (typeof body.chiave !== 'string' || body.chiave !== chiave) {
+  const inserita = typeof body.chiave === 'string' ? body.chiave.trim() : '';
+  if (!chiaviValide.includes(inserita)) {
     await new Promise((r) => setTimeout(r, 600));
     return NextResponse.json({ error: 'Chiave di installazione errata.' }, { status: 401 });
   }
